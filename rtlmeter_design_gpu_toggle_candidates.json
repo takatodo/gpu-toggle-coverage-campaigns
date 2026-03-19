@@ -1,0 +1,340 @@
+{
+  "candidates": [
+    {
+      "config_count": 5,
+      "design": "VeeR-EH1",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate VeeR-EH1 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "preferred_single_core_cpu_family",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 14,
+      "test_count": 4,
+      "top_module": "veer_eh1_gpu_cov_tb",
+      "verilog_source_count": 43
+    },
+    {
+      "config_count": 5,
+      "design": "VeeR-EH2",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate VeeR-EH2 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "preferred_single_core_cpu_family",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 14,
+      "test_count": 7,
+      "top_module": "veer_eh2_gpu_cov_tb",
+      "verilog_source_count": 49
+    },
+    {
+      "config_count": 5,
+      "design": "VeeR-EL2",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate VeeR-EL2 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "preferred_single_core_cpu_family",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 14,
+      "test_count": 4,
+      "top_module": "veer_el2_gpu_cov_tb",
+      "verilog_source_count": 51
+    },
+    {
+      "config_count": 2,
+      "design": "XuanTie-E902",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate XuanTie-E902 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_medium_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "preferred_single_core_cpu_family",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 13,
+      "test_count": 3,
+      "top_module": "xuantie_e902_gpu_cov_tb",
+      "verilog_source_count": 124
+    },
+    {
+      "config_count": 4,
+      "design": "Example",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate Example gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 11,
+      "test_count": 2,
+      "top_module": "example_gpu_cov_tb",
+      "verilog_source_count": 1
+    },
+    {
+      "config_count": 2,
+      "design": "XuanTie-E906",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate XuanTie-E906 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_medium",
+        "has_standard_test",
+        "has_sanity_test",
+        "preferred_single_core_cpu_family",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 11,
+      "test_count": 3,
+      "top_module": "xuantie_e906_gpu_cov_tb",
+      "verilog_source_count": 250
+    },
+    {
+      "config_count": 4,
+      "design": "Vortex",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate Vortex gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_medium_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "medium_complexity_accelerator_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 9,
+      "test_count": 3,
+      "top_module": "vortex_gpu_cov_tb",
+      "verilog_source_count": 126
+    },
+    {
+      "config_count": 6,
+      "design": "XiangShan",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate XiangShan gpu_cov flow with generic baseline/pilot runner",
+      "priority": "high",
+      "rationale": [
+        "source_count_small",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 8,
+      "test_count": 5,
+      "top_module": "xiangshan_gpu_cov_tb",
+      "verilog_source_count": 8
+    },
+    {
+      "config_count": 8,
+      "design": "OpenPiton",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate OpenPiton gpu_cov flow with generic baseline/pilot runner",
+      "priority": "medium",
+      "rationale": [
+        "source_count_medium",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 5,
+      "test_count": 4,
+      "top_module": "openpiton_gpu_cov_tb",
+      "verilog_source_count": 250
+    },
+    {
+      "config_count": 2,
+      "design": "XuanTie-C906",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate XuanTie-C906 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "medium",
+      "rationale": [
+        "source_count_medium",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 5,
+      "test_count": 3,
+      "top_module": "xuantie_c906_gpu_cov_tb",
+      "verilog_source_count": 292
+    },
+    {
+      "config_count": 5,
+      "design": "BlackParrot",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate BlackParrot gpu_cov flow with generic baseline/pilot runner",
+      "priority": "medium",
+      "rationale": [
+        "source_count_medium",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 5,
+      "test_count": 2,
+      "top_module": "blackparrot_gpu_cov_tb",
+      "verilog_source_count": 320
+    },
+    {
+      "config_count": 2,
+      "design": "XuanTie-C910",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "integrate XuanTie-C910 gpu_cov flow with generic baseline/pilot runner",
+      "priority": "medium",
+      "rationale": [
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "ready_for_gpu_toggle",
+      "score": 4,
+      "test_count": 3,
+      "top_module": "xuantie_c910_gpu_cov_tb",
+      "verilog_source_count": 468
+    },
+    {
+      "config_count": 0,
+      "design": "OpenTitan",
+      "has_coverage_manifest": true,
+      "has_gpu_cov_tb": true,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "add OpenTitan gpu_cov_tb and coverage_regions manifest",
+      "priority": "low",
+      "rationale": [
+        "source_count_large",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "already_gpu_toggle_ready"
+      ],
+      "readiness": "gpu_toggle_contract_ready",
+      "score": 2,
+      "test_count": 5,
+      "top_module": "chip_sim_tb",
+      "verilog_source_count": 641
+    },
+    {
+      "config_count": 0,
+      "design": "NVDLA",
+      "has_coverage_manifest": false,
+      "has_gpu_cov_tb": false,
+      "has_sanity_test": true,
+      "has_standard_test": false,
+      "next_step": "add NVDLA gpu_cov_tb and coverage_regions manifest",
+      "priority": "low",
+      "rationale": [
+        "has_sanity_test",
+        "heavy_soc_style",
+        "missing_gpu_toggle_artifacts"
+      ],
+      "readiness": "needs_gpu_cov_tb_and_manifest",
+      "score": -2,
+      "test_count": 6,
+      "top_module": "tb_top",
+      "verilog_source_count": 403
+    },
+    {
+      "config_count": 0,
+      "design": "Caliptra",
+      "has_coverage_manifest": false,
+      "has_gpu_cov_tb": false,
+      "has_sanity_test": true,
+      "has_standard_test": true,
+      "next_step": "add Caliptra gpu_cov_tb and coverage_regions manifest",
+      "priority": "low",
+      "rationale": [
+        "source_count_large",
+        "has_standard_test",
+        "has_sanity_test",
+        "heavy_soc_style",
+        "missing_gpu_toggle_artifacts"
+      ],
+      "readiness": "needs_gpu_cov_tb_and_manifest",
+      "score": -2,
+      "test_count": 5,
+      "top_module": "caliptra_top_tb",
+      "verilog_source_count": 612
+    }
+  ],
+  "descriptor_count": 15,
+  "designs_root": "~/GEM_try/rtlmeter/designs",
+  "recommended_next_designs": [
+    "VeeR-EH1",
+    "VeeR-EH2",
+    "VeeR-EL2",
+    "XuanTie-E902",
+    "Example"
+  ],
+  "schema_version": "rtlmeter-design-gpu-toggle-candidates-v1"
+}

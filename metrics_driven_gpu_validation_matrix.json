@@ -1,0 +1,134 @@
+{
+  "schema_version": "metrics-driven-gpu-validation-matrix-v1",
+  "flows": [
+    "A:CPU baseline",
+    "B:GPU-metrics-only",
+    "C:GPU-guided"
+  ],
+  "fixed_metrics": [
+    "time_to_10_30_50_80_coverage",
+    "time_to_first_bug",
+    "coverage_gain_per_hour",
+    "unique_bugs_per_hour",
+    "useful_simulations_ratio",
+    "transfer_overhead_ratio",
+    "score_to_actual_gain_correlation"
+  ],
+  "tiers": [
+    {
+      "tier": "T0",
+      "target": "Example:kind:hello",
+      "class": "harness_sanity",
+      "current_state": "execute_pass_confirmed",
+      "first_use": "cpu_baseline_scaffolding"
+    },
+    {
+      "tier": "T0",
+      "target": "tiny_accel.v",
+      "class": "local_microbench_seed",
+      "current_state": "local_source_present",
+      "first_use": "metric_kernel_prototyping"
+    },
+    {
+      "tier": "T1",
+      "target": "OpenTitan.tlul_fifo_sync",
+      "class": "simple_realistic_routing_slice",
+      "current_state": "gpu_campaign_assets_present",
+      "first_use": "first_real_abc_comparison"
+    },
+    {
+      "tier": "T1",
+      "target": "OpenTitan.tlul_socket_1n",
+      "class": "adjacent_routing_slice",
+      "current_state": "slice_rollout_assets_present",
+      "first_use": "first_rule_transfer_check"
+    },
+    {
+      "tier": "T2",
+      "target": "Vortex:gpu_cov",
+      "class": "medium_external_design",
+      "current_state": "tier2_abc_completed_runtime_reuse_validated_second_test_reproduced_provisional_freeze_ready",
+      "first_use": "medium_circuit_validation"
+    },
+    {
+      "tier": "T3",
+      "target": "VeeR-EL2/EH1/EH2",
+      "class": "late_external_stress_path",
+      "current_state": "bounded_direct_llvm_refresh_preserved",
+      "first_use": "late_portability_and_lowering_stress"
+    }
+  ],
+  "immediate_execution_order": [
+    "Example:kind:hello",
+    "tiny_accel.v",
+    "OpenTitan.tlul_fifo_sync",
+    "OpenTitan.tlul_socket_1n",
+    "Vortex:gpu_cov",
+    "VeeR-EL2/EH1/EH2"
+  ],
+  "tier0_exit_condition": [
+    "CPU baseline artifact is repeatable",
+    "smallest sequential RTL seed has a repeatable metric microbench artifact",
+    "metric path bottleneck attribution is available at coarse breakdown level"
+  ],
+  "current_evidence": {
+    "example_cpu_baseline_json": "/tmp/metrics_driven_t0/example_kind_hello_cpu_baseline.json",
+    "tiny_accel_metric_microbench_json": "/tmp/metrics_driven_t0/tiny_accel_metric_microbench.json",
+    "tiny_accel_metric_stability_matrix_json": "/tmp/metrics_driven_t0/tiny_accel_metric_stability_matrix.json",
+    "tier1_tlul_fifo_sync_abc_manifest_json": "/tmp/metrics_driven_t1/tlul_fifo_sync_abc_manifest.json",
+    "tier1_tlul_fifo_sync_abc_runs": {
+      "A": "/tmp/metrics_driven_t1_exec_v6/tlul_fifo_sync/A_cpu_baseline/summary.json",
+      "B": "/tmp/metrics_driven_t1_exec_v9/tlul_fifo_sync/B_gpu_metrics_only/summary.json",
+      "C": "/tmp/metrics_driven_t1_exec_v7/tlul_fifo_sync/C_gpu_guided/summary.json"
+    },
+    "tier1_tlul_socket_1n_abc_runs": {
+      "A": "/tmp/metrics_driven_t1_socket_exec_v2/tlul_socket_1n/A_cpu_baseline/summary.json",
+      "B": "/tmp/metrics_driven_t1_socket_exec_v4/tlul_socket_1n/B_gpu_metrics_only/summary.json",
+      "C": "/tmp/metrics_driven_t1_socket_exec_v3/tlul_socket_1n/C_gpu_guided/summary.json"
+    },
+    "tier1_tlul_socket_1n_ab_scale_json": "/tmp/metrics_driven_t1_socket_scale_v1/tlul_socket_1n_ab_scale.json",
+    "tier2_vortex_readiness": {
+      "status": "tier2_abc_completed_runtime_reuse_validated_second_test_reproduced_provisional_freeze_ready",
+      "readiness_md": "./vortex_gpu_toggle_readiness.md",
+      "rtlmeter_smoke_workdir": "/tmp/rtlmeter_vortex_gpu_cov_smoke_v5",
+      "generic_baseline_summary_json": "/tmp/vortex_gpu_cov_baseline_cpu_smoke_v2/summary.json",
+      "sgemm_cpu_summary_json": "/tmp/vortex_gpu_cov_sgemm_cpu_probe_v2/summary.json",
+      "sgemm_gpu_summary_json": "/tmp/vortex_gpu_cov_sgemm_gpu_probe_v4/summary.json",
+      "tier2_manifest_json": "/tmp/metrics_driven_t2_exec_v2/vortex_abc_manifest.json",
+      "runtime_probe_summary_json": "/tmp/runtime_log_job/vortex_t2_B_sgemm/runtime_summary.json",
+      "runtime_probe_reuse_summary_json": "/tmp/runtime_log_job/vortex_t2_B_reuse_v1/runtime_summary.json",
+      "tier2_saxpy_manifest_json": "/tmp/metrics_driven_t2_exec_v3_saxpy/vortex_abc_manifest.json",
+      "tier2_saxpy_runs": {
+        "A": "/tmp/metrics_driven_t2_exec_v3_saxpy/A_cpu_baseline/summary.json",
+        "B": "/tmp/metrics_driven_t2_exec_v3_saxpy/B_gpu_metrics_only/summary.json",
+        "C": "/tmp/metrics_driven_t2_exec_v3_saxpy/C_gpu_guided/summary.json"
+      },
+      "tier2_runs": {
+        "A": "/tmp/metrics_driven_t2_exec_v2/A_cpu_baseline/summary.json",
+        "B": "/tmp/metrics_driven_t2_exec_v2/B_gpu_metrics_only/summary.json",
+        "C": "/tmp/metrics_driven_t2_exec_v2/C_gpu_guided/summary.json"
+      }
+    },
+    "provisional_rule_packet": {
+      "json": "./metrics_driven_provisional_rule_packet.json",
+      "md": "./metrics_driven_provisional_rule_packet.md",
+      "status": "provisional_rule_family_frozen"
+    },
+    "tiny_accel_baseline_131072x64": {
+      "metric_total_ms_mean": 695.7726009989832,
+      "metric_total_ms_cv": 0.011648769747800804,
+      "simulate_cycles_ms_mean": 5.53649933347818,
+      "simulate_cycles_ms_cv": 0.08198561511239727,
+      "dominant_coarse_buckets": [
+        "toggle_popcount",
+        "candidate_popcount",
+        "packing",
+        "unpacking"
+      ],
+      "notes": [
+        "The earlier 611.03 ms observation was a first-run sample and should not be treated as the stable Tier-0 baseline.",
+        "host_device_transfer_ms remains unavailable until a real GPU backend exists; only a host-copy proxy is reported."
+      ]
+    }
+  }
+}

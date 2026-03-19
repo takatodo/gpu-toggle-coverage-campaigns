@@ -1,0 +1,29 @@
+{
+  "schema_version": "gpu-toggle-readiness-v1",
+  "design": "VeeR-EL2",
+  "configuration": "gpu_cov",
+  "readiness": "pregpu_alive_direct_circt_lowering_boundary_active",
+  "weakest_point": "plain Verilator execution of the current gpu_cov path is alive, the legacy raw sim-accel/GPU path is still pathologically failing, but gpu_cov_gate now survives the VeeR family-standard reruns; the remaining late-family blocker has moved to non-VeeR families such as XuanTie, not to EL2-local termination anymore",
+  "validated": {
+    "descriptor_validate": true,
+    "compile_smoke": true,
+    "execute_smoke": true,
+    "sparse_preload_compile_in_progress": true,
+    "late_family_dhry_standard_pass": true,
+    "late_family_dhry_gpu_cov_pathologically_failing": true,
+    "late_family_dhry_gpu_cov_gate_pass": true
+  },
+  "artifacts": {
+    "descriptor": "~/GEM_try/rtlmeter/designs/VeeR-EL2/descriptor.yaml",
+    "wrapper": "~/GEM_try/rtlmeter/designs/VeeR-EL2/src/veer_el2_gpu_cov_tb.sv",
+    "coverage_manifest": "~/GEM_try/rtlmeter/designs/VeeR-EL2/tests/veer_el2_coverage_regions.json",
+    "workdir": "/tmp/rtlmeter_veer_el2_gpu_cov_compile/VeeR-EL2/gpu_cov",
+    "sparse_preload_workdir": "/tmp/veer_el2_gpu_cov_sparse_smoke",
+    "late_family_validation_workdir": "/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov",
+    "late_family_gate_workdir": "/tmp/veer_el2_gpu_cov_gate_direct_v1/VeeR-EL2/gpu_cov_gate",
+    "late_family_standard_stdout": "/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_standard/VeeR-EL2/default/execute-0/dhry/_execute/stdout.log",
+    "late_family_gpu_cov_stdout": "/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_gpu_cov/VeeR-EL2/gpu_cov/execute-0/dhry/_execute/stdout.log",
+    "late_family_gpu_cov_gate_stdout": "/tmp/veer_el2_gpu_cov_gate_direct_v1/VeeR-EL2/gpu_cov_gate/execute-0/dhry/_execute/stdout.log"
+  },
+  "next_step": "keep the direct-LLVM legality track separate, retain gpu_cov_gate as the default VeeR late-family precheck, and shift the cross-family blocker to XuanTie gpu_cov_tb/coverage-manifest bring-up rather than further EL2-local harness rewrites"
+}

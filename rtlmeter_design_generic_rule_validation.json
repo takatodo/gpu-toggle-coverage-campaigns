@@ -1,0 +1,371 @@
+{
+  "rows": [
+    {
+      "a_hit": 10,
+      "artifacts": {
+        "a_summary": "/tmp/metrics_driven_t2_exec_v2/A_cpu_baseline/summary.json",
+        "b_summary": "/tmp/metrics_driven_t2_exec_v2/B_gpu_metrics_only/summary.json",
+        "c_summary": "/tmp/metrics_driven_t2_exec_v2/C_gpu_guided/summary.json"
+      },
+      "b_hit": 10,
+      "b_vs_a_coverage_per_second_ratio": 6.612969819431697,
+      "b_vs_a_wall_clock_speedup": 6.612969819431696,
+      "c_hit": 10,
+      "configuration": "gpu_cov",
+      "dead_region_count": 0,
+      "design": "Vortex:gpu_cov:sgemm",
+      "feature_family": "wrapper_ready_core",
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "sgemm",
+      "validation_kind": "actual_gpu_ab_c"
+    },
+    {
+      "a_hit": 10,
+      "artifacts": {
+        "a_summary": "/tmp/metrics_driven_t2_exec_v3_saxpy/A_cpu_baseline/summary.json",
+        "b_summary": "/tmp/metrics_driven_t2_exec_v3_saxpy/B_gpu_metrics_only/summary.json",
+        "c_summary": "/tmp/metrics_driven_t2_exec_v3_saxpy/C_gpu_guided/summary.json"
+      },
+      "b_hit": 10,
+      "b_vs_a_coverage_per_second_ratio": 6.461985937861924,
+      "b_vs_a_wall_clock_speedup": 6.461985937861924,
+      "c_hit": 10,
+      "configuration": "gpu_cov",
+      "dead_region_count": 0,
+      "design": "Vortex:gpu_cov:saxpy",
+      "feature_family": "wrapper_ready_core",
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "saxpy",
+      "validation_kind": "actual_gpu_ab_c"
+    },
+    {
+      "configuration": "gpu_cov_gate",
+      "design": "VeeR-EL2",
+      "feature_family": "wrapper_ready_core",
+      "rule_family": "balanced_source_general",
+      "status": "failed",
+      "stdout_log": "/tmp/veer_el2_gpu_cov_gate_direct_v1/VeeR-EL2/gpu_cov_gate/execute-0/dhry/_execute/stdout.log",
+      "test": "dhry",
+      "validation_kind": "late_family_gate"
+    },
+    {
+      "configuration": "gpu_cov_gate",
+      "design": "VeeR-EH1",
+      "feature_family": "wrapper_ready_general",
+      "rule_family": "balanced_source_general",
+      "status": "failed",
+      "stdout_log": "/tmp/veer_eh1_gpu_cov_gate_dhry_v1/VeeR-EH1/gpu_cov_gate/execute-0/dhry/_execute/stdout.log",
+      "test": "dhry",
+      "validation_kind": "late_family_gate"
+    },
+    {
+      "configuration": "gpu_cov_gate",
+      "design": "VeeR-EH2",
+      "feature_family": "wrapper_ready_core",
+      "rule_family": "balanced_source_general",
+      "status": "failed",
+      "stdout_log": "/tmp/veer_eh2_gpu_cov_gate_cmark_iccm_mt_v1/VeeR-EH2/gpu_cov_gate/execute-0/cmark_iccm_mt/_execute/stdout.log",
+      "test": "cmark_iccm_mt",
+      "validation_kind": "late_family_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xuantie_c906_gpu_toggle_readiness.json",
+        "summary": "/tmp/xuantie_c906_gpu_cov_gate_direct_harness_v15/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XuanTie-C906",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xuantie_c906_gpu_toggle_readiness.json",
+        "summary": "/tmp/xuantie_c906_gpu_cov_gate_direct_harness_v15/gpu_cov_gate/cmark/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XuanTie-C906",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "cmark",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xuantie_c910_gpu_toggle_readiness.json",
+        "summary": "/tmp/xuantie_c910_gpu_cov_gate_axi_if_v2/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XuanTie-C910",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xuantie_c910_gpu_toggle_readiness.json",
+        "summary": "/tmp/xuantie_c910_gpu_cov_gate_axi_if_v2/gpu_cov_gate/memcpy/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XuanTie-C910",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "memcpy",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xiangshan_gpu_toggle_readiness.json",
+        "summary": "/tmp/xiangshan_family_gpu_cov_gate_contract_v3/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XiangShan",
+      "feature_family": "wrapper_ready_general",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "needs_review",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./xiangshan_gpu_toggle_readiness.json",
+        "summary": "/tmp/xiangshan_family_gpu_cov_gate_contract_v3/gpu_cov_gate/cmark/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "XiangShan",
+      "feature_family": "wrapper_ready_general",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "needs_review",
+      "test": "cmark",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./blackparrot_gpu_toggle_readiness.json",
+        "summary": "/tmp/blackparrot_gpu_cov_gate_v6/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "BlackParrot",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./blackparrot_gpu_toggle_readiness.json",
+        "summary": "/tmp/blackparrot_gpu_cov_gate_v6/gpu_cov_gate/cmark/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "BlackParrot",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "cmark",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./openpiton_gpu_toggle_readiness.json",
+        "summary": "/tmp/openpiton_gpu_cov_gate_v8/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "OpenPiton",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./openpiton_gpu_toggle_readiness.json",
+        "summary": "/tmp/openpiton_gpu_cov_gate_v8/gpu_cov_gate/fib/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "OpenPiton",
+      "feature_family": "wrapper_ready_core",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "fib",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./example_gpu_toggle_readiness.json",
+        "summary": "/tmp/example_gpu_cov_gate_v6/gpu_cov_gate/hello/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "Example",
+      "feature_family": "wrapper_ready_general",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "hello",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "readiness_json": "./example_gpu_toggle_readiness.json",
+        "summary": "/tmp/example_gpu_cov_gate_v6/gpu_cov_gate/user/summary.json"
+      },
+      "bench_runtime_mode": "readiness_only",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": -1,
+      "design": "Example",
+      "feature_family": "wrapper_ready_general",
+      "hit": -1,
+      "partial_regions": [],
+      "points_total": -1,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "user",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "run_dir": "/tmp/xuantie_e902_gpu_cov_gate_debug_v25",
+        "summary": "/tmp/xuantie_e902_gpu_cov_gate_debug_v25/bench_run.log",
+        "tb": "/tmp/xuantie_e902_gpu_cov_gate_debug_v25/verilogSourceFiles/tb.v"
+      },
+      "bench_runtime_mode": "direct_bench_kernel",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": 0,
+      "design": "XuanTie-E902",
+      "feature_family": "wrapper_ready_core",
+      "hit": 18,
+      "partial_regions": [],
+      "points_total": 18,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "memcpy",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    },
+    {
+      "artifacts": {
+        "run_dir": "/tmp/xuantie_e906_gpu_cov_gate_debug_v25",
+        "summary": "/tmp/xuantie_e906_gpu_cov_gate_debug_v25/bench_run.log",
+        "tb": "/tmp/xuantie_e906_gpu_cov_gate_debug_v25/verilogSourceFiles/tb.v"
+      },
+      "bench_runtime_mode": "direct_bench_kernel",
+      "bench_runtime_reused": false,
+      "configuration": "gpu_cov_gate",
+      "dead_region_count": 0,
+      "design": "XuanTie-E906",
+      "feature_family": "wrapper_ready_core",
+      "hit": 18,
+      "partial_regions": [],
+      "points_total": 18,
+      "rule_family": "balanced_source_general",
+      "status": "passed",
+      "test": "cmark",
+      "validation_kind": "post_freeze_actual_gpu_gate"
+    }
+  ],
+  "schema_version": "rtlmeter-design-generic-rule-validation-v2",
+  "scope_decision": "scope_limited_final_freeze",
+  "scoped_out_harness_debt": [
+    {
+      "configuration": "gpu_cov",
+      "design": "VeeR-EL2",
+      "evidence": "/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_gpu_cov/VeeR-EL2/gpu_cov/execute-0/dhry/_execute/stdout.log",
+      "reason": "Raw tb_top-based gpu_cov path remains active but falls into a pathological TEST_FAILED loop despite program_loaded=1 and reset release.",
+      "status": "scoped_out_harness_debt",
+      "test": "dhry"
+    },
+    {
+      "configuration": "gpu_cov",
+      "design": "XuanTie-E902",
+      "evidence": "/tmp/xuantie_e902_rule_guided_gpu_v1/memcpy/summary.json",
+      "reason": "Raw timing-based tb.v sim-accel gpu_cov path stays dead; the raw gpu_cov CPU summary-path and raw gpu_cov actual GPU path both return 0/18 with all three regions dead.",
+      "status": "scoped_out_harness_debt",
+      "test": "memcpy"
+    },
+    {
+      "configuration": "gpu_cov",
+      "design": "XuanTie-E906",
+      "evidence": "/tmp/xuantie_e906_rule_guided_gpu_v1/cmark/summary.json",
+      "reason": "Raw timing-based tb.v sim-accel gpu_cov path stays dead; the raw gpu_cov CPU summary-path and raw gpu_cov actual GPU path both return 0/18 with all three regions dead.",
+      "status": "scoped_out_harness_debt",
+      "test": "cmark"
+    }
+  ],
+  "status": "final_rule_family_frozen_scope_limited"
+}

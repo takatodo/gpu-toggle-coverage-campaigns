@@ -1,0 +1,359 @@
+{
+  "rules": [
+    {
+      "description": "Deep sequential FIFO/control slices with large candidate budgets, early plateau, and source backend kept end-to-end.",
+      "evidence_slices": [
+        "tlul_fifo_async"
+      ],
+      "evidence_summary": {
+        "best_hit_per_wall_s": 0.0,
+        "campaign_backends": [
+          "source"
+        ],
+        "campaign_gpu_nstates_values": [
+          512
+        ],
+        "count": 1
+      },
+      "feature_predicates": [
+        "recommended_campaign_candidate_count >= 512",
+        "recommended_stop == true",
+        "campaign_backend == source",
+        "best_case_hit <= 8"
+      ],
+      "recommended_defaults": {
+        "convergence_defaults": {
+          "recommended_campaign_candidate_count": 512,
+          "recommended_campaign_shard_count": 2,
+          "recommended_stop": true
+        },
+        "launch_backend_policy": {
+          "campaign": "source",
+          "multi_step": "source",
+          "single_step": "source",
+          "sweep": "source"
+        },
+        "search_defaults": {
+          "batch_length": 12,
+          "campaign_gpu_nstates": 512,
+          "campaign_sequential_rep_graph_mode": "auto",
+          "driver_defaults": {},
+          "gpu_nstates": 32,
+          "keep_top_k": 16,
+          "pilot_campaign_candidate_count": 512,
+          "pilot_sweep_cases": 256,
+          "profile_family": "mixed",
+          "region_budget": {
+            "reqfifo_storage_upper": 2,
+            "response_payload": 2,
+            "rspfifo_storage_upper": 2
+          },
+          "seed_fanout": 1,
+          "states_per_case": 4,
+          "trace_length": 12,
+          "variants_per_case": 4
+        }
+      },
+      "rule_family": "deep_fifo_source"
+    },
+    {
+      "description": "Compact socket-style routing slices with high hit density and small candidate budgets; source backend kept for all phases.",
+      "evidence_slices": [
+        "tlul_socket_1n"
+      ],
+      "evidence_summary": {
+        "best_hit_per_wall_s": 24.325314944658082,
+        "campaign_backends": [
+          "source"
+        ],
+        "campaign_gpu_nstates_values": [
+          256
+        ],
+        "count": 1
+      },
+      "feature_predicates": [
+        "campaign_backend == source",
+        "recommended_campaign_candidate_count <= 96",
+        "best_case_hit >= 10"
+      ],
+      "recommended_defaults": {
+        "convergence_defaults": {
+          "recommended_campaign_candidate_count": 0,
+          "recommended_campaign_shard_count": 0,
+          "recommended_stop": false
+        },
+        "launch_backend_policy": {
+          "campaign": "source",
+          "multi_step": "source",
+          "single_step": "source",
+          "sweep": "source"
+        },
+        "search_defaults": {
+          "batch_length": 48,
+          "campaign_gpu_nstates": 256,
+          "campaign_sequential_rep_graph_mode": "always",
+          "driver_defaults": {
+            "access_ack_data_pct": 96,
+            "address_mask": 4092,
+            "batch_length": 48,
+            "device_a_ready_pct": 88,
+            "drain_cycles": 72,
+            "host_d_ready_pct": 92,
+            "put_full_pct": 78,
+            "put_partial_pct": 8,
+            "req_address_mode": 2,
+            "req_burst_len_max": 10,
+            "req_data_hi_xor": 4278255360,
+            "req_data_mode": 4,
+            "req_family": 2,
+            "req_fill_target": 2,
+            "req_valid_pct": 92,
+            "rsp_data_hi_xor": 16711680,
+            "rsp_data_mode": 4,
+            "rsp_delay_max": 1,
+            "rsp_delay_mode": 0,
+            "rsp_family": 3,
+            "rsp_fill_target": 2,
+            "rsp_valid_pct": 96,
+            "source_mask": 63
+          },
+          "gpu_nstates": 64,
+          "keep_top_k": 24,
+          "pilot_campaign_candidate_count": 0,
+          "pilot_sweep_cases": 384,
+          "profile_family": "dead-region",
+          "region_budget": {
+            "reqfifo_storage_upper": 6,
+            "response_payload": 8,
+            "rspfifo_storage_upper": 6
+          },
+          "seed_fanout": 1,
+          "states_per_case": 4,
+          "trace_length": 24,
+          "variants_per_case": 10
+        }
+      },
+      "rule_family": "compact_socket_source"
+    },
+    {
+      "description": "Routing slices where source wins sweep/campaign but CIRCT remains useful for multi-step benchmark shape.",
+      "evidence_slices": [
+        "tlul_socket_m1",
+        "xbar_peri"
+      ],
+      "evidence_summary": {
+        "best_hit_per_wall_s": 17.271030195346682,
+        "campaign_backends": [
+          "source"
+        ],
+        "campaign_gpu_nstates_values": [
+          512
+        ],
+        "count": 2
+      },
+      "feature_predicates": [
+        "campaign_backend == source",
+        "multi_step_backend == circt-cubin",
+        "recommended_campaign_candidate_count <= 160",
+        "best_case_hit between 6 and 10"
+      ],
+      "recommended_defaults": {
+        "convergence_defaults": {
+          "recommended_campaign_candidate_count": 0,
+          "recommended_campaign_shard_count": 0,
+          "recommended_stop": false
+        },
+        "launch_backend_policy": {
+          "campaign": "source",
+          "multi_step": "circt-cubin",
+          "single_step": "source",
+          "sweep": "source"
+        },
+        "search_defaults": {
+          "batch_length": 56,
+          "campaign_gpu_nstates": 512,
+          "campaign_sequential_rep_graph_mode": "always",
+          "driver_defaults": {
+            "access_ack_data_pct": 98,
+            "address_mask": 4092,
+            "batch_length": 56,
+            "device_a_ready_pct": 92,
+            "drain_cycles": 80,
+            "host_d_ready_pct": 88,
+            "put_full_pct": 88,
+            "put_partial_pct": 4,
+            "req_address_mode": 3,
+            "req_burst_len_max": 12,
+            "req_data_hi_xor": 4294901760,
+            "req_data_mode": 4,
+            "req_family": 3,
+            "req_fill_target": 2,
+            "req_valid_pct": 94,
+            "rsp_data_hi_xor": 4293918720,
+            "rsp_data_mode": 4,
+            "rsp_delay_max": 0,
+            "rsp_delay_mode": 0,
+            "rsp_family": 3,
+            "rsp_fill_target": 2,
+            "rsp_valid_pct": 96,
+            "source_mask": 63
+          },
+          "gpu_nstates": 64,
+          "keep_top_k": 24,
+          "pilot_campaign_candidate_count": 0,
+          "pilot_sweep_cases": 384,
+          "profile_family": "dead-region",
+          "region_budget": {
+            "reqfifo_storage_upper": 4,
+            "response_payload": 6,
+            "rspfifo_storage_upper": 4
+          },
+          "seed_fanout": 1,
+          "states_per_case": 4,
+          "trace_length": 24,
+          "variants_per_case": 10
+        }
+      },
+      "rule_family": "mixed_source_campaign_circt_multistep"
+    },
+    {
+      "description": "Dense xbar-like slices where CIRCT wins across single/multi/campaign and candidate budget remains moderate.",
+      "evidence_slices": [
+        "xbar_main"
+      ],
+      "evidence_summary": {
+        "best_hit_per_wall_s": 5.6406364320256825,
+        "campaign_backends": [
+          "circt-cubin"
+        ],
+        "campaign_gpu_nstates_values": [
+          512
+        ],
+        "count": 1
+      },
+      "feature_predicates": [
+        "campaign_backend == circt-cubin",
+        "single_step_backend == circt-cubin",
+        "multi_step_backend == circt-cubin"
+      ],
+      "recommended_defaults": {
+        "convergence_defaults": {
+          "recommended_campaign_candidate_count": 0,
+          "recommended_campaign_shard_count": 0,
+          "recommended_stop": false
+        },
+        "launch_backend_policy": {
+          "campaign": "circt-cubin",
+          "multi_step": "circt-cubin",
+          "single_step": "circt-cubin",
+          "sweep": "circt-cubin"
+        },
+        "search_defaults": {
+          "batch_length": 64,
+          "campaign_gpu_nstates": 512,
+          "campaign_sequential_rep_graph_mode": "never",
+          "driver_defaults": {
+            "access_ack_data_pct": 100,
+            "address_mask": 4092,
+            "batch_length": 64,
+            "device_a_ready_pct": 92,
+            "drain_cycles": 96,
+            "host_d_ready_pct": 92,
+            "put_full_pct": 88,
+            "put_partial_pct": 4,
+            "req_address_mode": 3,
+            "req_burst_len_max": 12,
+            "req_data_hi_xor": 4294901760,
+            "req_data_mode": 4,
+            "req_family": 3,
+            "req_fill_target": 2,
+            "req_valid_pct": 94,
+            "rsp_data_hi_xor": 4293918720,
+            "rsp_data_mode": 4,
+            "rsp_delay_max": 0,
+            "rsp_delay_mode": 0,
+            "rsp_family": 3,
+            "rsp_fill_target": 2,
+            "rsp_valid_pct": 96,
+            "source_mask": 63
+          },
+          "gpu_nstates": 64,
+          "keep_top_k": 24,
+          "pilot_campaign_candidate_count": 0,
+          "pilot_sweep_cases": 384,
+          "profile_family": "dead-region",
+          "region_budget": {
+            "reqfifo_storage_upper": 3,
+            "response_payload": 6,
+            "rspfifo_storage_upper": 3
+          },
+          "seed_fanout": 1,
+          "states_per_case": 4,
+          "trace_length": 28,
+          "variants_per_case": 10
+        }
+      },
+      "rule_family": "dense_xbar_circt"
+    },
+    {
+      "description": "Fallback source-oriented rule for unseen balanced routing slices when no stronger family matches.",
+      "evidence_slices": [
+        "tlul_fifo_sync",
+        "tlul_err",
+        "tlul_request_loopback"
+      ],
+      "evidence_summary": {
+        "best_hit_per_wall_s": 5.2659718395414625,
+        "campaign_backends": [
+          "source"
+        ],
+        "campaign_gpu_nstates_values": [
+          512
+        ],
+        "count": 3
+      },
+      "feature_predicates": [
+        "fallback"
+      ],
+      "recommended_defaults": {
+        "convergence_defaults": {
+          "recommended_campaign_candidate_count": 0,
+          "recommended_campaign_shard_count": 0,
+          "recommended_stop": false
+        },
+        "launch_backend_policy": {
+          "campaign": "source",
+          "multi_step": "source",
+          "single_step": "source",
+          "sweep": "source"
+        },
+        "search_defaults": {
+          "batch_length": 12,
+          "campaign_gpu_nstates": 512,
+          "campaign_sequential_rep_graph_mode": "always",
+          "driver_defaults": {},
+          "gpu_nstates": 32,
+          "keep_top_k": 16,
+          "pilot_campaign_candidate_count": 0,
+          "pilot_sweep_cases": 256,
+          "profile_family": "mixed",
+          "region_budget": {
+            "reqfifo_storage_upper": 4,
+            "response_payload": 1,
+            "rspfifo_storage_upper": 3
+          },
+          "seed_fanout": 1,
+          "states_per_case": 4,
+          "trace_length": 12,
+          "variants_per_case": 4
+        }
+      },
+      "rule_family": "balanced_source_general"
+    }
+  ],
+  "schema_version": "toggle-coverage-generic-rules-v1",
+  "source_convergence_json": "./opentitan_tlul_slice_convergence_freeze.json",
+  "source_cpu_vs_gpu_json": "./opentitan_tlul_slice_cpu_vs_gpu_campaign_efficiency.json",
+  "source_production_defaults_json": "./opentitan_tlul_slice_production_defaults.json",
+  "source_profiles_json": "./opentitan_tlul_slice_execution_profiles.json"
+}

@@ -1,0 +1,181 @@
+# VeeR-EL2 GPU Toggle Readiness
+
+- Design: `VeeR-EL2`
+- Configuration: `gpu_cov`
+- Readiness: `pregpu_alive_direct_circt_lowering_boundary_active`
+- Weakest point: plain Verilator execution of the current `gpu_cov` path is alive, the legacy raw sim-accel/GPU path is still dead, and the active correctness frontier is now the direct CIRCT lowering boundary into LLVM/PTX
+- Execution priority note: `VeeR` is now treated as a late external-design stress path. The first metrics-driven validation gate has been moved to simpler circuits so that GPU-method value and external lowering complexity are not coupled from the start.
+
+## Validated
+
+- Descriptor validation: passed
+- Compile smoke: passed
+- Execute smoke: passed
+- Sparse-preload `gpu_cov` cold baseline: completed under the shared header-based array ABI and deferred-load plus pulse-reset path, but coverage remained dead on sim-accel/GPU
+- Plain Verilator `gpu_cov` debug run: alive, with fetch, trace, LSU, and mailbox activity visible in stdout
+- Family companion gates:
+  - `VeeR-EH1:gpu_cov:hello` plain-Verilator pre-GPU gate: pass
+  - `VeeR-EH2:gpu_cov:hello` plain-Verilator pre-GPU gate: pass
+- A fresh late-family stress run on `VeeR-EL2:gpu_cov:dhry` now shows that the current shared `gpu_cov` path is not reset-dead on EL2:
+  - standard `dhry` precheck under `/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_standard/.../stdout.log` reaches `TEST_PASSED`
+  - the `gpu_cov` pre-GPU execute under `/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_gpu_cov/.../stdout.log` shows `program_loaded=1`, `rst_l=1`, `porst_l=1`, and repeating LSU/trace/WB activity before falling into a long `TEST_FAILED` loop
+- A dedicated clean-termination gate configuration now closes that late-family loop on EL2:
+  - `VeeR-EL2:gpu_cov_gate:dhry` under `/tmp/veer_el2_gpu_cov_gate_direct_v1/.../_execute/stdout.log` reaches `TEST_PASSED`
+  - the same run exits via `$finish` at `tb_top.sv:671`, so the late-family precheck no longer depends on timeout or manual kill
+- The same family gate has now been rolled through the assigned standard-grade siblings:
+  - `VeeR-EH1:gpu_cov_gate:dhry` passes under `/tmp/veer_eh1_gpu_cov_gate_dhry_v1/.../_execute/stdout.log`
+  - `VeeR-EH2:gpu_cov_gate:cmark_iccm_mt` passes under `/tmp/veer_eh2_gpu_cov_gate_cmark_iccm_mt_v1/.../_execute/stdout.log`
+
+## Current blocker
+
+- Plain Verilator `gpu_cov` runs show first IFU request/response, trace, WB, LSU, and mailbox activity even with `run_req=0`, so the wrapper and sparse preload are not inherently dead
+- `EH1/EH2` are no longer only smoke-level siblings; the standard-grade `gpu_cov_gate` reruns now pass too, so the remaining late-family blocker has moved outside VeeR.
+- The current unresolved external-family gap is now `XuanTie` missing `gpu_cov_tb` / coverage-manifest artifacts rather than VeeR mailbox termination.
+- The dead behavior is specific to the legacy raw sim-accel/GPU path after the pre-GPU stage
+- The latest dead-probe run under `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu` now completes on a GPU-capable host and produces a dead compact with `coverage_points_hit=0`
+- Its focused decode shows cycle advance without commit progress, with `rst_l=0`, `porst_l=0`, dead IFU accepts, dead trace/mailbox sticky bits, and zero active `real_toggle_subset_word*_o`
+- The same run reports zero applied preload values inside the sim-accel runtime, so preload handoff and reset/bootstrap onboarding are the current first-order suspects
+- CPU replay of `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/kernel_generated.cpu.cpp` now reproduces that dead signature exactly under `gpu_driver.init`, so the failure is already present before GPU-specific execution
+- Large hidden preload arrays such as `gpu_cov_program_entries` are intentionally allowed to remain metadata-only, so their absence from `kernel_generated.vars.tsv` is not sufficient to call the lowering broken by itself
+- The actual raw sidecar bug is that the emitted `veer_el2_gpu_cov_tb.dut.gpu_cov_program_entries` preload target has no generated `PRELOAD_WORD` consumer in the current raw `kernel_generated.cpu.cpp`
+- The same raw sidecar path also loses the sequential progression of `gpu_cov_reset_phase_q`, while `gpu_cov_program_loaded_q` still gets forced high; this explains the dead signature of `program_loaded=1` with `rst_l=0` and `porst_l=0`
+- A fresh `sim_accel.program.json` export under `/tmp/veer_el2_program_json_probe` still contains the `gpu_cov_reset_phase_q` sequential assigns and a `gpu_cov_program_entries` preload consumer, so the failure is narrower than generic sim-accel onboarding
+- A JSON-derived fused model under `/tmp/veer_el2_program_json_fused` preserves reset-release logic and the bootstrap preload consumer, which points the blocker at the raw `--sim-accel-only` sidecar/full-seq path rather than the source-level wrapper contract
+- The direct CIRCT DUT-only EL2 path now reaches `pre-arc bridge -> externalize-registers -> flatten -> direct-llvm-clean -> direct-llvm-agg`, producing `/tmp/veer_el2_direct_clean_stage_v1/circt_direct.ext_clean.mlir` and `/tmp/veer_el2_direct_clean_stage_v1/circt_direct.ext_clean_agg.mlir` as single-module checkpoints
+- `hw-convert-bitcasts + llhd-unroll-loops + llhd-remove-control-flow` now remove the residual `llhd.combinational`/`llhd.yield` subset completely on the non-Arc branch, and `hw-aggregate-to-comb + canonicalize + cse` further remove the remaining aggregate-heavy `hw.*` structure
+- The remaining direct-lowering blocker is no longer just "there is an SCC": bounded cut probes across the EL2 cycle show that seven distinct single-edge cuts remove the aggregate-lowered SCC completely, which means the self-cycle is now localized enough to treat as a bounded lowering problem rather than a generic import failure
+- A dedicated SCC probe reports the uncut checkpoint as `remaining_count=1042`, `largest_scc_size=41`, which makes the non-Arc blocker reproducible independent of manual log inspection
+- The latest SCC probe also records the concrete 26-step cycle path, which closes through `%14962 -> %14963 -> %22204 -> %22067 -> %22364 -> %22980 -> %22340 -> %15108 -> %15139 -> %15152 -> %14962`
+- The same stage-v4 SCC summary now shows that the loop is not centered on interface import anymore: the SCC itself has no direct module-input operands, and the recorded 26-step loop closes internally through `%14962 -> %14963 -> %22204 -> %22067 -> %22364 -> %22980 -> %22340 -> %15108 -> %15139 -> %15152 -> %14962`
+- Boundary fan-in into that self-cycle is still dominated by extracts from `%dout_state_1036`, `%dout_state_0_3`, `%dout_state_34_1`, and by `%14384`, a 96-bit externalized pack whose extracted bits feed `%14962`, `%15082`, and `%15084` while its backing concat `%14510` still depends on `%15139`
+- That shape is more consistent with an internal self-cycle in the lowered EL2 netlist, likely around an externalized next-state pack region, than with a front-end import bug or a PTX/backend problem
+- On the cut artifact, the local `hw.module -> func` bridge, `hw-convert-bitcasts`, CIRCT `--convert-to-llvm`, `--reconcile-unrealized-casts`, and `mlir-translate --mlir-to-llvmir` now all succeed
+- The current earliest successful cycle cuts are `%14963 -> %22202` and `%22202 -> %22204`, while the original late-cycle `%15152 -> %14962` cut also remains valid; this means the blocker is not tied to one special edge but to a narrower internal legality class on that cycle
+- That means the cut probe no longer stops at aggregate legalization: it reaches real LLVM IR, so the next blocker is to convert this bounded cut result into a repeatable legality or ordering strategy on the uncut EL2 path
+- A bounded PTX smoke now also fails after real LLVM IR on the cut probe, which moves that sub-problem into the NVPTX backend/parser layer rather than CIRCT legality itself
+- The bounded feedback-sweep stage is now integrated into `sv_to_circt_ptx.py` and verified through `rtlmeter_case_to_circt.py` on EL2, so best-cut selection is emitted automatically alongside the direct checkpoint artifacts
+- The same integrated wrapper path now reaches the bounded best-cut probe and emits real `LLVM IR` automatically under `direct_feedback_probe/direct_feedback_cut.ll`, so the current `LLVM IR` milestone no longer depends on an external hand-run probe command
+- A fresh EL2 wrapper rerun under `/tmp/veer_el2_direct_feedback_probe_refresh_v1` reproduces the same integrated bounded result and re-selects `%14963 -> %22202` as the best cut, so the current direct-LLVM blocker is stable across artifact regeneration
+- A new SCC-driven heuristic classifier now infers the same `%14963 -> %22202` cut directly from the uncut EL2 cycle summary and reaches real `LLVM IR` under `/tmp/veer_el2_inferred_feedback_probe_v1` without running the full sweep first, so the current workaround has moved from manual or sweep-only orchestration toward a legality-classifier prototype
+- The same classifier path is now wrapped by `./run_veer_el2_inferred_direct_llvm_refresh.py` and rebuilds `EL2` from source ingress through aggregate lowering and inferred-cut `LLVM IR` under `/tmp/veer_el2_inferred_direct_refresh_v1`, so the current bounded direct-LLVM milestone is now refreshable from a single local entrypoint
+- The `Arc` branch still fails at loop splitting around `el2_lsu`, so the next step remains direct-LLVM legalization rather than treating `Arc` recovery as the only path
+- The newest late-family stress evidence shows that the current EL2 `gpu_cov` blocker is no longer well described as "dead coverage":
+  - the path stays active and emits more than one million `TEST_FAILED` lines before manual stop
+  - the latest captured file under `/tmp/veer_family_late_validation_v1/VeeR-EL2/gpu_cov/_pregpu_gpu_cov/VeeR-EL2/gpu_cov/execute-0/dhry/_execute/stdout.log` exceeded `1.17 GiB`
+  - the new `gpu_cov_gate` path now reaches clean `TEST_PASSED` and `$finish`
+  - this narrows the next EL2 stress question to rolling the clean-termination gate across the family rather than to reset/bootstrap deadness or an immediate lower-level harness rewrite
+
+## Evidence
+
+- Descriptor:
+  - `~/GEM_try/rtlmeter/designs/VeeR-EL2/descriptor.yaml`
+- Wrapper:
+  - `~/GEM_try/rtlmeter/designs/VeeR-EL2/src/veer_el2_gpu_cov_tb.sv`
+- Gated testbench:
+  - `~/GEM_try/rtlmeter/designs/VeeR-EL2/src/tb_top.sv`
+- Clean-termination gate execute:
+  - `/tmp/veer_el2_gpu_cov_gate_direct_v1/VeeR-EL2/gpu_cov_gate/execute-0/dhry/_execute/stdout.log`
+- Coverage manifest:
+  - `~/GEM_try/rtlmeter/designs/VeeR-EL2/tests/veer_el2_coverage_regions.json`
+- Compile/execute workdir:
+  - `/tmp/rtlmeter_veer_el2_gpu_cov_compile/VeeR-EL2/gpu_cov`
+- Current sparse-preload workdir:
+  - `/tmp/veer_el2_gpu_cov_sparse_smoke`
+- Deferred sparse-preload validation workdir:
+  - `/tmp/veer_el2_gpu_cov_sparse_smoke_v3`
+- Sim-accel/GPU dead probe workdir:
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu`
+- Sim-accel/GPU dead probe logs:
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/baseline_stdout.log`
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/build_nvcc.log`
+- Sim-accel/GPU dead probe summaries:
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/baseline.json`
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/decode.json`
+- Direct CIRCT flattened EL2 artifact:
+  - `/tmp/veer_el2_direct_probe_stage_v1/circt_direct.ext_flat.mlir`
+- Direct CIRCT cleaned EL2 artifact:
+  - `/tmp/veer_el2_direct_clean_stage_v1/circt_direct.ext_clean.mlir`
+- Direct CIRCT aggregate-lowered EL2 artifact:
+  - `/tmp/veer_el2_direct_clean_stage_v1/circt_direct.ext_clean_agg.mlir`
+- Direct CIRCT aggregate-lowered EL2 stage-v2 artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v2/circt_direct.ext_clean_agg.mlir`
+- Direct CIRCT aggregate-lowered EL2 SCC summary:
+  - `/tmp/veer_el2_direct_agg_stage_v2/circt_direct.ext_clean_agg.scc.json`
+- Direct CIRCT aggregate-lowered EL2 stage-v3 artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v3/circt_direct.ext_clean_agg.mlir`
+- Direct CIRCT aggregate-lowered EL2 stage-v3 SCC summary:
+  - `/tmp/veer_el2_direct_agg_stage_v3/circt_direct.ext_clean_agg.scc.json`
+- Direct CIRCT aggregate-lowered EL2 stage-v4 artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg.mlir`
+- Direct CIRCT aggregate-lowered EL2 stage-v4 SCC summary:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg.scc.json`
+- Direct CIRCT aggregate-lowered EL2 stage-v4 manifest:
+  - `/tmp/veer_el2_direct_agg_stage_v4/sv_to_circt_ptx_manifest.json`
+- Direct CIRCT aggregate-lowered EL2 cut artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.mlir`
+- Direct CIRCT aggregate-lowered EL2 cut SCC summary:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.scc.json`
+- Direct CIRCT aggregate-lowered EL2 cut func artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.func.mlir`
+- Direct CIRCT aggregate-lowered EL2 cut LLVM-dialect artifact:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.llvm.mlir`
+- Direct CIRCT aggregate-lowered EL2 cut LLVM-dialect artifact after `hw-convert-bitcasts`:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.hwbitcast.llvm.mlir`
+- Direct CIRCT aggregate-lowered EL2 cut LLVM IR smoke output:
+  - `/tmp/veer_el2_direct_agg_stage_v4/circt_direct.ext_clean_agg_cut15152.hwbitcast.ll`
+- Direct CIRCT aggregate-lowered EL2 cut reconciled LLVM IR:
+  - `/tmp/veer_el2_direct_agg_stage_v4/tmp.func.hwbitcast.v2.reconciled.ll`
+- Direct CIRCT aggregate-lowered EL2 bounded cut sweep summary:
+  - `/tmp/veer_el2_direct_feedback_sweep_full_v2/direct_feedback_sweep_summary.json`
+- Direct CIRCT aggregate-lowered EL2 bounded PTX probe manifest:
+  - `/tmp/veer_el2_direct_feedback_probe_ptx_v2/direct_feedback_probe_manifest.json`
+- Auto-emitted best cut spec for bounded probes:
+  - `./veer_el2_direct_feedback_cut_best.json`
+- Integrated direct-LLVM feedback-sweep stage via RTLMeter wrapper:
+  - `/tmp/veer_el2_direct_feedback_stage_v1/direct_feedback_sweep/direct_feedback_sweep_summary.json`
+  - `/tmp/veer_el2_direct_feedback_stage_v1/direct_feedback_cut_best.json`
+  - `/tmp/veer_el2_direct_feedback_stage_v1/sv_to_circt_ptx_manifest.json`
+- Integrated direct-LLVM feedback-probe stage via RTLMeter wrapper:
+  - `/tmp/veer_el2_direct_feedback_probe_stage_v2/direct_feedback_probe/direct_feedback_probe_manifest.json`
+  - `/tmp/veer_el2_direct_feedback_probe_stage_v2/direct_feedback_probe/direct_feedback_cut.ll`
+  - `/tmp/veer_el2_direct_feedback_probe_stage_v2/sv_to_circt_ptx_manifest.json`
+- Refreshed integrated direct-LLVM feedback-probe stage via RTLMeter wrapper:
+  - `/tmp/veer_el2_direct_feedback_probe_refresh_v1/direct_feedback_sweep/direct_feedback_sweep_summary.json`
+  - `/tmp/veer_el2_direct_feedback_probe_refresh_v1/direct_feedback_cut_best.json`
+  - `/tmp/veer_el2_direct_feedback_probe_refresh_v1/direct_feedback_probe/direct_feedback_probe_manifest.json`
+  - `/tmp/veer_el2_direct_feedback_probe_refresh_v1/direct_feedback_probe/direct_feedback_cut.ll`
+  - `/tmp/veer_el2_direct_feedback_probe_refresh_v1/sv_to_circt_ptx_manifest.json`
+- SCC-driven inferred-cut direct-LLVM probe:
+  - `./infer_direct_llvm_feedback_cut.py`
+  - `./run_inferred_direct_llvm_feedback_probe.py`
+  - `/tmp/veer_el2_inferred_feedback_probe_v1/inferred_cut.json`
+  - `/tmp/veer_el2_inferred_feedback_probe_v1/probe/direct_feedback_probe_manifest.json`
+  - `/tmp/veer_el2_inferred_feedback_probe_v1/probe/direct_feedback_cut.ll`
+  - `/tmp/veer_el2_inferred_feedback_probe_v1/run_inferred_direct_llvm_feedback_probe_manifest.json`
+- Single-entry EL2 inferred direct-LLVM refresh:
+  - `./run_veer_el2_inferred_direct_llvm_refresh.py`
+  - `/tmp/veer_el2_inferred_direct_refresh_v1/run_veer_el2_inferred_direct_llvm_refresh_manifest.json`
+  - `/tmp/veer_el2_inferred_direct_refresh_v1/inferred_probe/inferred_cut.json`
+  - `/tmp/veer_el2_inferred_direct_refresh_v1/inferred_probe/probe/direct_feedback_probe_manifest.json`
+  - `/tmp/veer_el2_inferred_direct_refresh_v1/inferred_probe/probe/direct_feedback_cut.ll`
+- Direct CIRCT Arc failure log:
+  - `/tmp/veer_el2_circt_llvm_v8/circt_direct.arc_llvm.log`
+- Direct CIRCT non-Arc LLVM bridge failure log:
+  - `/tmp/veer_el2_direct_clean_stage_v1/circt_direct.llvm_dialect_v4.stderr`
+- CPU replay summaries:
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/cpu_replay_cycle1_zero.json`
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/cpu_replay_2140_gpuinit.json`
+  - `/tmp/veer_el2_gpu_cov_simaccel_dead_probe_gpu/cpu_replay_2140_gpuinit_sparse_entries.json`
+- Current sparse-preload summary:
+  - `/tmp/veer_el2_gpu_cov_sparse_smoke_v3.json`
+- Plain-Verilator alive run:
+  - `/tmp/veer_el2_gpu_cov_cpu_direct_v4/VeeR-EL2/gpu_cov/execute-0/hello/_execute/stdout.log`
+- Pre-GPU gpu_cov execute log under sim-accel staging:
+  - `/tmp/veer_el2_gpu_cov_simaccel_v2/_pregpu_gpu_cov/VeeR-EL2/gpu_cov/execute-0/hello/_execute/stdout.log`
+
+## Next Step
+
+- Split EL2 work into two tracks:
+  - direct-LLVM track: keep generalizing the bounded legality result on the uncut EL2 artifact
+- late-family execution track: keep `gpu_cov_gate` as the default VeeR family precheck and treat the raw `gpu_cov` loop as a localized execution-contract bug
+- VeeR family rollout is now sufficient to move the late-family critical path to `XuanTie` readiness rather than to more EL2-local harness surgery

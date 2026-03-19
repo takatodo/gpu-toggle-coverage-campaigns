@@ -1,0 +1,269 @@
+{
+  "execution_order": [
+    "Runtime-Aggregation:preserve_operational_socket_grpo_pair_and_refresh_packets",
+    "Runtime-Aggregation:preserve_tlul_request_loopback_as_the_third_operational_positive_slice_and_select_the_next_onboarding_target",
+    "Validation:preserve_frozen_packets_while_caliptra_runs_in_background",
+    "Portability:maintenance",
+    "Freeze-maintenance:maintenance"
+  ],
+  "goal": "Decide generic rules that accelerate toggle coverage convergence on GPU across multiple RTL designs.",
+  "roles": [
+    {
+      "focus": "preserve the frozen actual-GPU evidence packets while Caliptra stays as a background large-family validation lane",
+      "name": "Validation"
+    },
+    {
+      "focus": "preserve the canonical socket-side GRPO dual-mode packet as an operational mixed-GPU pair, preserve tlul_request_loopback as the third operational positive slice, keep xbar_peri/xbar_main as frozen control slices, hold tlul_fifo_async as partial/nonpositive, and select the next onboarding target after the current trio",
+      "name": "Runtime-Aggregation"
+    },
+    {
+      "focus": "keep native hsaco and WSL Radeon summaries stable while resumed validation leans on them",
+      "name": "Portability"
+    },
+    {
+      "focus": "preserve the frozen generic rule family during portability work",
+      "name": "Freeze"
+    }
+  ],
+  "schema_version": "generic-toggle-coverage-rule-tasks-v3",
+  "tasks": [
+    {
+      "artifacts": [
+        "./generic_toggle_coverage_rule_plan.md",
+        "/tmp/metrics_driven_t1_exec_v6/tlul_fifo_sync/A_cpu_baseline/summary.json",
+        "/tmp/metrics_driven_t1_exec_v9/tlul_fifo_sync/B_gpu_metrics_only/summary.json",
+        "/tmp/metrics_driven_t1_exec_v7/tlul_fifo_sync/C_gpu_guided/summary.json",
+        "/tmp/metrics_driven_t1_socket_exec_v2/tlul_socket_1n/A_cpu_baseline/summary.json",
+        "/tmp/metrics_driven_t1_socket_exec_v4/tlul_socket_1n/B_gpu_metrics_only/summary.json",
+        "/tmp/metrics_driven_t1_socket_exec_v3/tlul_socket_1n/C_gpu_guided/summary.json"
+      ],
+      "id": "G1",
+      "notes": [
+        "Tier-1 targets are FIFO, arbiter, AXI-lite bridge, and simple NoC router",
+        "Do not let VeeR lowering status block this phase",
+        "Comparable A/B/C artifacts now exist for both tlul_fifo_sync and tlul_socket_1n"
+      ],
+      "priority": "P0",
+      "role": "Validation",
+      "status": "completed",
+      "success_criteria": [
+        "At least one simple circuit can be run under the A/B/C comparison shape",
+        "The wall-clock budget, seed budget, and candidate budget are fixed across flows",
+        "The experiments emit the same core metrics for all three flows"
+      ],
+      "title": "Establish Tier-1 simple-circuit A/B/C baselines using CPU baseline, GPU-metrics-only, and GPU-guided flows"
+    },
+    {
+      "artifacts": [
+        "./generic_toggle_coverage_rule_plan.md",
+        "/tmp/metrics_driven_t0/tiny_accel_metric_microbench.json",
+        "/tmp/metrics_driven_t0/tiny_accel_metric_stability_matrix.json",
+        "/tmp/metrics_driven_t1_socket_scale_v1/tlul_socket_1n_ab_scale.json"
+      ],
+      "id": "G2",
+      "notes": [
+        "This phase exists to prove that the GPU has a plausible win region before deeper flow work",
+        "Tier-1 should not start until Tier-0 can at least attribute the metric-path bottleneck at a coarse breakdown level",
+        "Current socket-scale evidence places the first Tier-1 crossover region around candidate_count ~= 132-264"
+      ],
+      "priority": "P0",
+      "role": "Runtime-Aggregation",
+      "status": "completed",
+      "success_criteria": [
+        "Toggle, diff, popcount, histogram/reduction, packing/unpacking, and a transfer proxy are measured against CPU baselines",
+        "The same Tier-0 metric microbench is rerun at least 3 times under the baseline condition to separate stable cost from first-run noise",
+        "A light state/cycle sweep is recorded for 32768/65536/131072 states and 32/64/128 cycles",
+        "Transfer-inclusive throughput is reported, not just kernel time",
+        "A rough crossover point is identified in terms of candidate count or state count"
+      ],
+      "title": "Microbenchmark GPU-friendly metric kernels and identify the first scale where GPU wins"
+    },
+    {
+      "artifacts": [
+        "./generic_toggle_coverage_rule_plan.md",
+        "/tmp/runtime_log_job/vortex_t2_B_sgemm/runtime_summary.json"
+      ],
+      "id": "G3",
+      "notes": [
+        "This phase prevents metric drift across simple, medium, and late external-family experiments"
+      ],
+      "priority": "P0",
+      "role": "Freeze",
+      "status": "completed",
+      "success_criteria": [
+        "The shared metrics include time-to-coverage, time-to-bug, coverage gain per hour, unique bugs per hour, useful simulations ratio, transfer overhead ratio, and score-to-actual-gain correlation",
+        "Success criteria v1 are explicit enough to reject a fast-but-useless GPU path"
+      ],
+      "title": "Fix the provisional metric set and success thresholds for metrics-driven validation"
+    },
+    {
+      "artifacts": [
+        "./generic_toggle_coverage_rule_plan.md",
+        "/tmp/metrics_driven_t2_exec_v2/A_cpu_baseline/summary.json",
+        "/tmp/metrics_driven_t2_exec_v2/B_gpu_metrics_only/summary.json",
+        "/tmp/metrics_driven_t2_exec_v2/C_gpu_guided/summary.json"
+      ],
+      "id": "G4",
+      "notes": [
+        "Tier-2 targets include DMA, crossbar, cache slice, and OpenTitan slice-level designs",
+        "Vortex gpu_cov now has comparable fixed-test A/B/C summaries on the assigned sgemm workload",
+        "A second standard workload, saxpy, reproduces the same packet and compact SHA as sgemm rather than widening the active region set",
+        "The remaining Tier-2 question is no longer wrapper bring-up but whether the current partial memory-path regions are sufficient for provisional rule freeze"
+      ],
+      "priority": "P1",
+      "role": "Validation",
+      "status": "completed",
+      "success_criteria": [
+        "At least one medium circuit shows interpretable A/B/C results",
+        "The same metrics and budgets are preserved across Tier-1 and Tier-2",
+        "The first provisional feature-to-rule relationship becomes visible"
+      ],
+      "title": "Roll the same metrics-driven method to Tier-2 medium circuits and measure coverage and bug-finding value"
+    },
+    {
+      "artifacts": [
+        "./generic_toggle_coverage_rule_plan.md",
+        "/tmp/runtime_log_job/vortex_t2_B_sgemm/runtime_summary.json",
+        "/tmp/runtime_log_job/vortex_t2_B_reuse_v1/runtime_summary.json",
+        "./runtime_runner_scope.json",
+        "./runtime_runner_scope.md"
+      ],
+      "id": "G5",
+      "notes": [
+        "Do not optimize runtime before proving that the metric loop itself is useful",
+        "Direct bench reuse is now validated on warm-cache Vortex B: the monitored runner command drops from 109.56s to 2.49s while preserving the same compact SHA and 10/18 hit result",
+        "Direct bench reuse is also now validated on the preload-bearing late-family path VeeR-EH1:gpu_cov_gate:hello under /tmp/veer_eh1_gpu_cov_gate_reuse_validation_v1/reuse_compare.json, where wrapper and direct bench reuse agree on compact SHA, coverage points, and real-toggle subset points while materializing memory_image.direct.tsv and memory_image.payload.tsv locally",
+        "The heavier VeeR-EL2:gpu_cov_gate:dhry path now also matches under /tmp/veer_el2_gpu_cov_gate_reuse_validation_v1/reuse_compare.json with the same compact SHA, coverage points, and real-toggle subset points while materializing a 4710-word payload locally",
+        "run_rtlmeter_gpu_toggle_baseline.py itself now defaults to reuse for GPU executions, and /tmp/veer_eh1_gpu_cov_gate_reuse_validation_v1/summary_auto.json confirms a flag-free rerun lands on direct_bench_kernel with the same compact SHA and coverage signature",
+        "/tmp/opentitan_slice_bundle_cache_validation_v1/bundle_reuse_compare.json separately shows the OpenTitan slice baseline family landing on cached_bundle_kernel with bundle_cache_hit moving from false to true while preserving the same compact SHA on tlul_fifo_sync",
+        "/tmp/device_aware_rule_slice_v1/run.json shows the rule-guided slice runner applying a 32GB-tier runtime policy to compact_socket_source, lifting gpu_nstates from 64 to 96 and keep_top_k from 24 to 36, while /tmp/slice_campaign_policy_validate_v1/campaign_manifest.json and /tmp/slice_sweep_policy_validate_v1/summary.json show the low-level OpenTitan slice campaign/sweep chokepoints carrying the same gpu_runtime_policy and effective_search_defaults, and /tmp/device_aware_batch_policy_examples.json captures the shared 16GB vs 32GB policy outputs for compact_socket_source and balanced_source_general",
+        "The VeeR and XuanTie family validation runners plus the main GPU orchestrators run_rtlmeter_design_rule_guided_sweep.py and run_tier2_vortex_abc.py inherit the direct-reuse default, and /tmp/xuantie_family_gpu_cov_gate_baseline_v5/reuse_compare.json shows the XuanTie gate runner moving from wrapper first pass to direct_bench_kernel on warm reruns for both E902/E906 standard workloads while preserving compact SHA and the same dead 0/18 packet, so the remaining runtime work is the narrower residual cross-family runner rollout rather than proving the mechanism",
+        "This is no longer a freeze blocker; it is follow-on runtime work to keep the remaining orchestration gap bounded",
+        "runtime_runner_scope now records that no residual mainline rollout runner remains: run_veer_gpu_cov_cpu_debug.py, run_veer_direct_vsim.py, and run_example_cpu_baseline.py are explicitly scoped out as debug/raw or Tier-0 support paths rather than blockers to the frozen packet"
+      ],
+      "priority": "P1",
+      "role": "Runtime-Aggregation",
+      "status": "completed",
+      "success_criteria": [
+        "Transfer overhead no longer erases the measured gain from the useful GPU metric loop",
+        "Feature caching or batching reduces repeated host-device churn",
+        "End-to-end gain remains visible after merge and ranking costs are included"
+      ],
+      "title": "Reduce transfer, cache, merge, and ranking overhead after the metric loop proves useful"
+    },
+    {
+      "artifacts": [
+        "./run_mixed_gpu_dispatcher.py",
+        "./mixed_gpu_dispatcher.md",
+        "./torch_dual_gpu_envs.md"
+      ],
+      "id": "G18",
+      "notes": [
+        "This is intentionally a thin orchestration layer rather than a replacement for the existing sweep/campaign runners",
+        "The canonical split is GeForce for simulation and Radeon for the learner lane",
+        "The dispatcher depends on the already-validated uv Torch env split and gpu-selection-policy contract"
+      ],
+      "priority": "P3",
+      "role": "Runtime-Aggregation",
+      "status": "completed",
+      "success_criteria": [
+        "Both lanes can be launched from one entrypoint without manually rebuilding environment variables each time",
+        "The simulation lane defaults to cuda_only and the learner lane defaults to rocm_only",
+        "The dispatcher remains compatible with the existing CUDA and ROCm Torch env wrappers"
+      ],
+      "title": "Provide a minimal mixed-GPU dispatcher for GeForce=sim and Radeon=learner"
+    },
+    {
+      "artifacts": [
+        "rtlmeter_design_toggle_rule_assignments.json",
+        "./metrics_driven_provisional_rule_packet.json",
+        "./metrics_driven_provisional_rule_packet.md",
+        "/tmp/metrics_driven_t2_exec_v3_saxpy/B_gpu_metrics_only/summary.json"
+      ],
+      "id": "G6",
+      "notes": [
+        "The provisional family is now frozen from Tier-1 plus Tier-2 evidence, including two standard Vortex workloads",
+        "VeeR is not required to reach this provisional freeze, but will be required to finish the overall final freeze"
+      ],
+      "priority": "P1",
+      "role": "Freeze",
+      "status": "completed",
+      "success_criteria": [
+        "Rule candidates are expressed in circuit features rather than family names",
+        "The rule family fixes gpu_nstates, campaign_gpu_nstates, states_per_case, candidate_count, shard_count, recommended_stop, and region_budget",
+        "The provisional rules survive both simple and medium designs"
+      ],
+      "title": "Decide the provisional generic rule family from OpenTitan plus Tier-1 and Tier-2 evidence"
+    },
+    {
+      "artifacts": [
+        "./veer_el2_gpu_toggle_readiness.md",
+        "./run_veer_el2_inferred_direct_llvm_refresh.py",
+        "./veer_el2_direct_feedback_cut_best.json"
+      ],
+      "id": "G7",
+      "notes": [
+        "Current preserved evidence includes bounded LLVM IR on EL2 and an SCC-driven inferred-cut classifier",
+        "A fresh EL2 dhry stress run also shows that the raw tb_top-based gpu_cov path is active but pathologically non-terminating under TEST_FAILED, while the new gpu_cov_gate path reaches clean TEST_PASSED",
+        "VeeR family rollout is no longer the blocker because EH1 dhry and EH2 cmark_iccm_mt now also pass under gpu_cov_gate",
+        "Raw late-family sim-accel harness debt remains isolated as follow-on work rather than a freeze blocker"
+      ],
+      "priority": "P2",
+      "role": "Lowering",
+      "status": "completed",
+      "success_criteria": [
+        "The late stress path is refreshable from source ingress to bounded LLVM IR",
+        "Late external-family validation no longer depends on stale /tmp artifacts",
+        "VeeR-specific lowering problems are isolated from the earlier metrics-driven value question"
+      ],
+      "title": "Use the preserved VeeR work as a late external-design stress path rather than the first validation gate"
+    },
+    {
+      "artifacts": [
+        "./veer_el2_gpu_toggle_readiness.md",
+        "./veer_family_gpu_toggle_readiness.md",
+        "./xuantie_family_gpu_toggle_readiness.md"
+      ],
+      "id": "G8",
+      "notes": [
+        "VeeR now survives the family-standard gpu_cov_gate reruns, and XuanTie now survives both gpu_cov_gate reruns and the generic summary path",
+        "Late-family validation now clears at the gpu_cov_gate level for both VeeR and XuanTie",
+        "Raw late-family sim-accel failures are explicitly scoped out as localized harness debt for this freeze"
+      ],
+      "priority": "P2",
+      "role": "Validation",
+      "status": "completed",
+      "success_criteria": [
+        "At least one non-simple external family survives the provisional rule family without dead coverage",
+        "The late stress path does not overturn the earlier Tier-1/Tier-2 conclusion",
+        "Any surviving failures are explained as lowering/runtime issues rather than metric-design issues"
+      ],
+      "title": "Validate the provisional rule family on VeeR-EL2/EH1/EH2 and XuanTie-E902/E906 as late external families"
+    },
+    {
+      "artifacts": [
+        "rtlmeter_design_toggle_rule_assignments.json",
+        "rtlmeter_design_generic_rule_validation.json",
+        "rtlmeter_design_generic_rule_validation.md",
+        "metrics_driven_final_rule_packet.json",
+        "metrics_driven_final_rule_packet.md"
+      ],
+      "id": "G9",
+      "notes": [
+        "Final freeze is now recorded as scope_limited_final_freeze",
+        "Included scope is OpenTitan slice validation, Tier-1/Tier-2 A/B/C evidence, and late-family gpu_cov_gate prechecks on VeeR/XuanTie",
+        "Excluded scope is the raw timing-based late-family sim-accel gpu_cov path, which remains localized harness debt"
+      ],
+      "priority": "P2",
+      "role": "Freeze",
+      "status": "completed",
+      "success_criteria": [
+        "The rule family survives simple, medium, and late external-family validation",
+        "The final operator packet is explained by measurable circuit features and not by family-name exceptions",
+        "The end-to-end GPU advantage survives transfer and aggregation costs"
+      ],
+      "title": "Final rule-table freeze after late external-family remeasurement"
+    }
+  ],
+  "weakest_point": "The mainline weakest point is no longer rule freeze, portability, ready-family closure, GPRO runner preset mismatch, GRPO rollout integration, raw socket-policy quality, or mixed-GPU operationalization of the canonical socket pair. The generic rule table is already frozen at scope_limited_final_freeze, native hsaco is canonicalized far enough for scope-limited portability, XuanTie-E902/E906 are actual-GPU validated, and the canonical socket packet is now operationalized under mixed-GPU runs: tlul_socket_1n carries the diversity-quality mode and tlul_socket_m1 carries the throughput mode as an actual sim-plus-learner pair. xbar_peri/xbar_main remain canonicalized control slices because larger dead-region campaigns and runner rechecks never moved them off their fixed best-case plateaus. The first-order blocker is therefore refreshing the downstream packets around the operational socket pair and deciding whether any next positive OpenTitan slice is actually proven beyond the socket pair while Caliptra stays backgrounded."
+}
