@@ -1,0 +1,267 @@
+{
+  "campaign_tuning": {
+    "candidate_count": 616,
+    "shard_count": 2
+  },
+  "convergence_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_convergence_freeze.json",
+  "convergence_profiles": {
+    "campaign": {
+      "best_case_dead_region_count": 0,
+      "best_case_hit": 18,
+      "completed_shards": 14,
+      "plateau_after_shard": 1,
+      "recommended_campaign_candidate_count": 616,
+      "recommended_campaign_shard_count": 2,
+      "recommended_convergence_thresholds": {
+        "max_topk_churn": 0.2,
+        "min_completed_shards": 4,
+        "min_hit_gain_per_1k": 0.25,
+        "min_new_regions_per_1k": 0.05,
+        "stable_shards": 3
+      },
+      "recommended_stop": true,
+      "recommended_stop_at_shard": 10,
+      "status": "frozen",
+      "stop_reasons": [
+        "new_region_gain_below_threshold",
+        "best_hit_gain_below_threshold",
+        "topk_churn_below_threshold"
+      ]
+    }
+  },
+  "debug_internal_output_names": [
+    "aes_cipher_control_gpu_cov_tb__DOT__bootstrapped_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__phase_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__sim_cycle_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__cycle_count_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__progress_cycle_count_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__reset_cycles_remaining_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__warmup_cycles_remaining_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__traffic_cycles_remaining_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__drain_cycles_remaining_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_expected_ok_count_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_expected_err_count_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_family_seen_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_family_acked_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_case_seen_q",
+    "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_case_acked_q",
+    "debug_state_sel_o",
+    "debug_add_rk_sel_o",
+    "debug_round_key_sel_o",
+    "debug_alert_seen_o",
+    "debug_reseed_req_seen_o",
+    "debug_subbytes_ack_seen_o",
+    "debug_keyexpand_ack_seen_o"
+  ],
+  "execution_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "execution_profiles": {
+    "campaign": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 2.3137,
+      "median_gpu_ms_per_rep": 0.369664,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "multi_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 2.3137,
+      "median_gpu_ms_per_rep": 0.369664,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "single_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 5,
+      "median_cpu_ms_per_rep": 0.030243,
+      "median_gpu_ms_per_rep": 0.019661,
+      "nstates": 16,
+      "scenario": "single_step_small",
+      "sequential_steps": 1,
+      "status": "frozen"
+    },
+    "sweep": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 2.3137,
+      "median_gpu_ms_per_rep": 0.369664,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    }
+  },
+  "external_actions_required": [],
+  "launch_backend_policy": {
+    "campaign": "source",
+    "multi_step": "source",
+    "reason": "benchmark_frozen_compact_match",
+    "single_step": "source",
+    "status": "default_source",
+    "sweep": "source"
+  },
+  "launch_gate": {
+    "blocked_by": [
+      "first_benchmark_review_pending"
+    ],
+    "can_prepare_launch": true,
+    "can_run_pilot": false
+  },
+  "notes": [
+    "This template is consumable by the workspace-local generic TL-UL slice runner.",
+    "Top module is inferred from the coverage TB path and should be verified whenever the source-side TB changes."
+  ],
+  "pilot_gate": "Validate handshake, dispatch, sub-bytes/key-expand progress, reseed/clear control, and alert/error paths before any breadth-first GRPO comparison.",
+  "priority": 12,
+  "runner": {
+    "baseline_reference_runner": "/home/takatodo/GEM_try/scripts/run_opentitan_tlul_fifo_sync_trace_gpu_sweep.py",
+    "planned_generic_runner": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/run_opentitan_tlul_slice_trace_gpu_sweep.py",
+    "runner_generalization_required": false
+  },
+  "runner_args_template": {
+    "batch_defaults_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_length": 24,
+    "campaign_gpu_nstates": 512,
+    "campaign_sequential_rep_graph_mode": "auto",
+    "cases": 12000,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/aes_cipher_control_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/aes_cipher_control_gpu_cov_tb.sv",
+    "cpu_reps": 1,
+    "dead_word_bias": true,
+    "debug_internal_output_names": [
+      "aes_cipher_control_gpu_cov_tb__DOT__bootstrapped_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__phase_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__sim_cycle_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__cycle_count_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__progress_cycle_count_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__reset_cycles_remaining_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__warmup_cycles_remaining_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__traffic_cycles_remaining_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__drain_cycles_remaining_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_expected_ok_count_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_expected_err_count_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_family_seen_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_family_acked_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_case_seen_q",
+      "aes_cipher_control_gpu_cov_tb__DOT__oracle_semantic_case_acked_q",
+      "debug_state_sel_o",
+      "debug_add_rk_sel_o",
+      "debug_round_key_sel_o",
+      "debug_alert_seen_o",
+      "debug_reseed_req_seen_o",
+      "debug_subbytes_ack_seen_o",
+      "debug_keyexpand_ack_seen_o"
+    ],
+    "driver_defaults": {
+      "batch_length": 24,
+      "device_a_ready_pct": 64,
+      "drain_cycles": 16,
+      "host_d_ready_pct": 64,
+      "req_address_mode": 0,
+      "req_data_mode": 0,
+      "req_family": 0,
+      "req_fill_target": 4,
+      "req_valid_pct": 92,
+      "reset_cycles": 4,
+      "rsp_delay_max": 4,
+      "rsp_error_pct": 6,
+      "rsp_fill_target": 2,
+      "rsp_valid_pct": 92
+    },
+    "global_top_k": 128,
+    "gpu_nstates": 32,
+    "gpu_reps": 3,
+    "gpu_sequential_steps": 48,
+    "keep_top_k": 16,
+    "pilot_campaign_candidate_count": 4096,
+    "pilot_sweep_cases": 256,
+    "profile_family": "mixed",
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/aes_cipher_control.sv",
+    "seed_fanout": 1,
+    "shard_count": 128,
+    "states_per_case": 4,
+    "target": "OpenTitan.aes_cipher_control",
+    "top_module": "aes_cipher_control_gpu_cov_tb",
+    "trace_length": 12,
+    "uniform_states": true,
+    "variants_per_case": 5,
+    "work_dir": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_pilots/aes_cipher_control"
+  },
+  "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "schema_version": "opentitan-tlul-slice-launch-template-v1",
+  "slice_name": "aes_cipher_control",
+  "static_features": {
+    "base_outputs_ready": true,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/aes_cipher_control_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/aes_cipher_control_gpu_cov_tb.sv",
+    "exclusive_word_count": 18,
+    "exclusive_word_fraction": 1.0,
+    "focused_wave_ready": true,
+    "multi_clock": false,
+    "overlap_word_count": 0,
+    "real_toggle_outputs_ready": true,
+    "real_toggle_word_count": 18,
+    "recommended_budget_scale": {
+      "cases": 1.0,
+      "keep_top_k": 1.0
+    },
+    "region_count": 5,
+    "region_names": [
+      "input_output_handshake_progress",
+      "cipher_vs_keyexpand_dispatch",
+      "subbytes_wait_vs_ack",
+      "prng_reseed_and_clear_control",
+      "alert_or_multirail_error"
+    ],
+    "required_output_count": 38,
+    "rtl_clock_ports": [
+      "clk_i"
+    ],
+    "rtl_input_port_count": 19,
+    "rtl_output_port_count": 26,
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/aes_cipher_control.sv",
+    "rtl_reset_ports": [
+      "rst_ni"
+    ],
+    "schema_version": "opentitan-tlul-slice-static-features-v1",
+    "search_prior_class": "standard",
+    "singleton_region_count": 0,
+    "structural_connectivity": {
+      "assignment_edge_count": 85,
+      "avg_input_reach_fraction": 1.0,
+      "avg_input_to_output_distance": 3.854118,
+      "avg_nonclock_input_degree": 1.588235,
+      "instance_block_count": 5,
+      "instance_edge_count": 115,
+      "max_input_to_output_distance": 7,
+      "max_nonclock_input_degree": 3,
+      "min_input_to_output_distance": 2,
+      "nonclock_input_count": 17,
+      "nonclock_output_count": 26,
+      "reachable_output_fraction": 0.961538,
+      "reconvergence_proxy_signal_count": 47,
+      "signal_graph_edge_count": 200,
+      "signal_graph_node_count": 123,
+      "structural_connectivity_class": "broad_structural_spread"
+    },
+    "target": "OpenTitan.aes_cipher_control",
+    "tb_contract_ready": true,
+    "tb_output_count": 81,
+    "toggle_bitmap_outputs_ready": true,
+    "words_per_region_avg": 3.6,
+    "words_per_region_max": 4,
+    "words_per_region_min": 3
+  },
+  "static_features_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_static_features.json",
+  "status": "onboarding_in_progress",
+  "target": "OpenTitan.aes_cipher_control"
+}

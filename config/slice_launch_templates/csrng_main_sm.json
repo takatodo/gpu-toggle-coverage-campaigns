@@ -1,0 +1,251 @@
+{
+  "campaign_tuning": {
+    "candidate_count": 890,
+    "shard_count": 2
+  },
+  "convergence_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_convergence_freeze.json",
+  "convergence_profiles": {
+    "campaign": {
+      "best_case_dead_region_count": 0,
+      "best_case_hit": 18,
+      "completed_shards": 2,
+      "plateau_after_shard": 1,
+      "recommended_campaign_candidate_count": 890,
+      "recommended_campaign_shard_count": 2,
+      "recommended_convergence_thresholds": {
+        "max_topk_churn": 0.2,
+        "min_completed_shards": 4,
+        "min_hit_gain_per_1k": 0.25,
+        "min_new_regions_per_1k": 0.05,
+        "stable_shards": 3
+      },
+      "recommended_stop": false,
+      "recommended_stop_at_shard": null,
+      "status": "frozen",
+      "stop_reasons": []
+    }
+  },
+  "debug_internal_output_names": [
+    "csrng_main_sm_gpu_cov_tb__DOT__bootstrapped_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__phase_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__sim_cycle_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__cycle_count_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__progress_cycle_count_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__phase_code_w",
+    "csrng_main_sm_gpu_cov_tb__DOT__rst_ni",
+    "csrng_main_sm_gpu_cov_tb__DOT__reset_cycles_cfg",
+    "csrng_main_sm_gpu_cov_tb__DOT__batch_length_cfg",
+    "csrng_main_sm_gpu_cov_tb__DOT__req_fill_target_cfg",
+    "csrng_main_sm_gpu_cov_tb__DOT__reset_cycles_remaining_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__warmup_cycles_remaining_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__traffic_cycles_remaining_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__drain_cycles_remaining_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__main_sm_state_w",
+    "csrng_main_sm_gpu_cov_tb__DOT__acmd_i",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_expected_ok_count_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_expected_err_count_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_semantic_family_seen_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_semantic_family_acked_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_semantic_case_seen_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__oracle_semantic_case_acked_q",
+    "csrng_main_sm_gpu_cov_tb__DOT__enable_i",
+    "debug_main_sm_state_o",
+    "debug_cmd_o",
+    "debug_flag0_o",
+    "debug_cmd_ready_o",
+    "debug_entropy_wait_o",
+    "debug_entropy_avail_o",
+    "debug_cmd_complete_o",
+    "debug_accept_seen_o",
+    "debug_entropy_wait_seen_o",
+    "debug_direct_issue_seen_o",
+    "debug_complete_seen_o",
+    "debug_error_seen_o"
+  ],
+  "execution_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "execution_profiles": {
+    "campaign": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 0.902427,
+      "median_gpu_ms_per_rep": 0.380928,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "multi_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 0.902427,
+      "median_gpu_ms_per_rep": 0.380928,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "single_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 5,
+      "median_cpu_ms_per_rep": 0.01001,
+      "median_gpu_ms_per_rep": 0.019456,
+      "nstates": 16,
+      "scenario": "single_step_small",
+      "sequential_steps": 1,
+      "status": "frozen"
+    },
+    "sweep": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 0.902427,
+      "median_gpu_ms_per_rep": 0.380928,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    }
+  },
+  "external_actions_required": [],
+  "launch_backend_policy": {
+    "campaign": "source",
+    "multi_step": "source",
+    "reason": "benchmark_frozen_compact_match",
+    "single_step": "source",
+    "status": "default_source",
+    "sweep": "source"
+  },
+  "launch_gate": {
+    "blocked_by": [
+      "first_benchmark_review_pending"
+    ],
+    "can_prepare_launch": true,
+    "can_run_pilot": false
+  },
+  "notes": [
+    "This template is consumable by the workspace-local generic TL-UL slice runner.",
+    "Top module is inferred from the coverage TB path and should be verified whenever the source-side TB changes."
+  ],
+  "pilot_gate": "Validate live command parse, entropy-wait versus direct issue, command-complete return, and terminal-error hold before any breadth-first GRPO comparison.",
+  "priority": 11,
+  "runner": {
+    "baseline_reference_runner": "/home/takatodo/GEM_try/scripts/run_opentitan_tlul_fifo_sync_trace_gpu_sweep.py",
+    "planned_generic_runner": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/run_opentitan_tlul_slice_trace_gpu_sweep.py",
+    "runner_generalization_required": false
+  },
+  "runner_args_template": {
+    "batch_defaults_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_length": 24,
+    "campaign_gpu_nstates": 512,
+    "campaign_sequential_rep_graph_mode": "auto",
+    "cases": 12000,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/csrng_main_sm_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/csrng_main_sm_gpu_cov_tb.sv",
+    "cpu_reps": 1,
+    "dead_word_bias": true,
+    "debug_internal_output_names": [],
+    "driver_defaults": {
+      "batch_length": 24,
+      "drain_cycles": 16,
+      "req_address_mode": 0,
+      "req_data_mode": 0,
+      "req_family": 0,
+      "req_fill_target": 8,
+      "req_valid_pct": 92,
+      "reset_cycles": 4,
+      "rsp_delay_max": 2,
+      "rsp_error_pct": 4,
+      "rsp_fill_target": 1,
+      "rsp_valid_pct": 96
+    },
+    "global_top_k": 128,
+    "gpu_nstates": 32,
+    "gpu_reps": 3,
+    "gpu_sequential_steps": 48,
+    "keep_top_k": 16,
+    "pilot_campaign_candidate_count": 4096,
+    "pilot_sweep_cases": 256,
+    "profile_family": "mixed",
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/csrng_main_sm.sv",
+    "seed_fanout": 1,
+    "shard_count": 128,
+    "states_per_case": 4,
+    "target": "OpenTitan.csrng_main_sm",
+    "top_module": "csrng_main_sm_gpu_cov_tb",
+    "trace_length": 12,
+    "uniform_states": true,
+    "variants_per_case": 5,
+    "work_dir": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_pilots/csrng_main_sm"
+  },
+  "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "schema_version": "opentitan-tlul-slice-launch-template-v1",
+  "slice_name": "csrng_main_sm",
+  "static_features": {
+    "base_outputs_ready": true,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/csrng_main_sm_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/csrng_main_sm_gpu_cov_tb.sv",
+    "exclusive_word_count": 18,
+    "exclusive_word_fraction": 1.0,
+    "focused_wave_ready": true,
+    "multi_clock": false,
+    "overlap_word_count": 0,
+    "real_toggle_outputs_ready": true,
+    "real_toggle_word_count": 18,
+    "recommended_budget_scale": {
+      "cases": 1.0,
+      "keep_top_k": 1.0
+    },
+    "region_count": 5,
+    "region_names": [
+      "command_parse_progress",
+      "entropy_wait_vs_direct_issue",
+      "instantiate_reseed_generate_update_split",
+      "command_complete_return",
+      "terminal_error_hold"
+    ],
+    "required_output_count": 38,
+    "rtl_clock_ports": [
+      "clk_i"
+    ],
+    "rtl_input_port_count": 11,
+    "rtl_output_port_count": 10,
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/csrng_main_sm.sv",
+    "rtl_reset_ports": [
+      "rst_ni"
+    ],
+    "schema_version": "opentitan-tlul-slice-static-features-v1",
+    "search_prior_class": "standard",
+    "singleton_region_count": 0,
+    "structural_connectivity": {
+      "assignment_edge_count": 2,
+      "avg_input_reach_fraction": 0.0,
+      "avg_input_to_output_distance": null,
+      "avg_nonclock_input_degree": 0.0,
+      "instance_block_count": 0,
+      "instance_edge_count": 0,
+      "max_input_to_output_distance": null,
+      "max_nonclock_input_degree": 0,
+      "min_input_to_output_distance": null,
+      "nonclock_input_count": 9,
+      "nonclock_output_count": 10,
+      "reachable_output_fraction": 0.0,
+      "reconvergence_proxy_signal_count": 0,
+      "signal_graph_edge_count": 2,
+      "signal_graph_node_count": 3,
+      "structural_connectivity_class": "narrow_structural_spread"
+    },
+    "target": "OpenTitan.csrng_main_sm",
+    "tb_contract_ready": true,
+    "tb_output_count": 86,
+    "toggle_bitmap_outputs_ready": true,
+    "words_per_region_avg": 3.6,
+    "words_per_region_max": 5,
+    "words_per_region_min": 3
+  },
+  "static_features_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_static_features.json",
+  "status": "onboarding_in_progress",
+  "target": "OpenTitan.csrng_main_sm"
+}

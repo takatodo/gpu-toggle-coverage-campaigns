@@ -11,11 +11,8 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
-RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
-DEFAULT_DESIGNS = ("VeeR-EL2", "VeeR-EH1", "VeeR-EH2")
-DEFAULT_WORK_DIR = ROOT_DIR / "work"
+DEFAULT_TESTS = ("hello", "fib")
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -38,19 +35,28 @@ def _run(
     )
 
 
+def _tail(path: Path, limit: int = 40) -> str:
+    if not path.exists():
+        return ""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return "\n".join(lines[-limit:])
+
+
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description="Run gpu_cov baseline validation across the VeeR family.")
-    parser.add_argument("--work-dir", type=Path, default=DEFAULT_WORK_DIR)
+    parser = argparse.ArgumentParser(
+        description="Run gpu_cov baseline validation for OpenPiton."
+    )
+    parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--json-out", type=Path)
-    parser.add_argument("--case-name", default="hello")
-    parser.add_argument("--design", dest="designs", action="append")
     parser.add_argument(
         "--configuration",
         default="gpu_cov_gate",
-        help="RTLMeter configuration to validate; defaults to the clean-termination late-family gate",
+        help="RTLMeter configuration to validate; defaults to gpu_cov_gate.",
     )
-    parser.add_argument("--nstates", type=int, default=4)
+    parser.add_argument("--test", dest="tests", action="append")
+    parser.add_argument("--nstates", type=int)
     parser.add_argument("--gpu-reps", type=int, default=1)
+    parser.add_argument("--gpu-warmup-reps", type=int, default=0)
     parser.add_argument("--cpu-reps", type=int, default=0)
     parser.add_argument("--summary-mode", default="prefilter")
     parser.add_argument("--compile-cache-dir", type=Path)
@@ -69,40 +75,57 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--compile-full-all-only", dest="compile_full_all_only", action="store_true")
     parser.add_argument("--no-compile-full-all-only", dest="compile_full_all_only", action="store_false")
-    parser.set_defaults(compile_full_all_only=True)
+    parser.set_defaults(compile_full_all_only=None)
+    parser.add_argument(
+        "--bench-extra-arg",
+        dest="bench_extra_args",
+        action="append",
+        default=[],
+        help="Extra argument forwarded to run_rtlmeter_gpu_toggle_baseline.py.",
+    )
     parser.set_defaults(reuse_bench_kernel_if_present=None)
     parser.add_argument("--rebuild", action="store_true")
-    parser.add_argument("--nvcc-flags", default="-O1 -std=c++17")
-    parser.add_argument(
-        "--skip-standard-precheck",
-        action="store_true",
-        help="Skip a standard Verilator run before gpu_cov validation",
-    )
+    parser.add_argument("--nvcc-flags", default="-O0 -std=c++17")
     args = parser.parse_args(argv)
 
-    designs = args.designs or list(DEFAULT_DESIGNS)
+    tests = args.tests or list(DEFAULT_TESTS)
     work_dir = args.work_dir.resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
-    json_out = (args.json_out or (work_dir / "veer_family_gpu_toggle_validation.json")).resolve()
+    json_out = (args.json_out or (work_dir / "openpiton_gpu_toggle_validation.json")).resolve()
+    nstates = args.nstates
+    if nstates is None:
+        nstates = 1 if args.configuration == "gpu_cov_gate" else 4
     reuse_bench_kernel_if_present = args.reuse_bench_kernel_if_present
     if reuse_bench_kernel_if_present is None:
         reuse_bench_kernel_if_present = args.configuration == "gpu_cov_gate"
+    compile_full_all_only = args.compile_full_all_only
+    if compile_full_all_only is None:
+        compile_full_all_only = args.configuration != "gpu_cov_gate"
+    bench_extra_args = list(args.bench_extra_args or [])
+    if not bench_extra_args and args.configuration == "gpu_cov_gate":
+      bench_extra_args = ["--assigns-per-kernel", "4000"]
 
     results: list[dict[str, Any]] = []
     overall_rc = 0
-    for design in designs:
-        case = f"{design}:{args.configuration}:{args.case_name}"
-        build_dir = work_dir / design / args.configuration
+    for test in tests:
+        case = f"OpenPiton:{args.configuration}:{test}"
+        build_dir = work_dir / args.configuration / test
         build_dir.mkdir(parents=True, exist_ok=True)
-        run_json = build_dir / "baseline.json"
+        run_json = build_dir / "summary.json"
+
         entry: dict[str, Any] = {
-            "design": design,
+            "design": "OpenPiton",
+            "configuration": args.configuration,
+            "test": test,
             "case": case,
             "build_dir": str(build_dir),
-            "json_out": str(run_json),
-            "stdout_log": str(build_dir / "baseline_stdout.log"),
-            "nvcc_flags": args.nvcc_flags,
+            "summary_json": str(run_json),
+            "nstates": int(nstates),
             "reuse_bench_kernel_if_present": bool(reuse_bench_kernel_if_present),
+            "compile_full_all_only": bool(compile_full_all_only),
+            "bench_extra_args": list(bench_extra_args),
+            "nvcc_flags": args.nvcc_flags,
+            "gpu_warmup_reps": int(args.gpu_warmup_reps),
         }
 
         cmd = [
@@ -115,48 +138,70 @@ def main(argv: list[str]) -> int:
             "--json-out",
             str(run_json),
             "--nstates",
-            str(args.nstates),
+            str(nstates),
             "--gpu-reps",
             str(args.gpu_reps),
+            "--gpu-warmup-reps",
+            str(args.gpu_warmup_reps),
             "--cpu-reps",
             str(args.cpu_reps),
             "--summary-mode",
             args.summary_mode,
-            "--include-focused-wave-prefilter",
         ]
-        cmd.extend(["--pre-gpu-gate", "never" if args.skip_standard_precheck else "always"])
         if args.skip_cpu_reference_build:
             cmd.append("--skip-cpu-reference-build")
         if reuse_bench_kernel_if_present:
             cmd.append("--reuse-bench-kernel-if-present")
-        if args.compile_full_all_only:
+        if compile_full_all_only:
             cmd.append("--compile-full-all-only")
+        else:
+            cmd.append("--no-compile-full-all-only")
+        for extra_arg in bench_extra_args:
+            cmd.append(f"--bench-extra-arg={extra_arg}")
         if args.compile_cache_dir:
             cmd.extend(["--compile-cache-dir", str(args.compile_cache_dir.resolve())])
         if args.rebuild:
             cmd.append("--rebuild")
 
         run_env = dict(os.environ)
-        run_env.setdefault("SIM_ACCEL_NVCC_FLAGS", args.nvcc_flags)
-        run_env.setdefault("SIM_ACCEL_COMPILE_FULL_ALL_ONLY", "1" if args.compile_full_all_only else "0")
-        run_env.setdefault("SIM_ACCEL_ENABLE_FULL_KERNEL_FUSER", "1" if args.compile_full_all_only else "0")
+        run_env["SIM_ACCEL_NVCC_FLAGS"] = args.nvcc_flags
+        run_env["SIM_ACCEL_COMPILE_FULL_ALL_ONLY"] = "1" if compile_full_all_only else "0"
+        run_env["SIM_ACCEL_ENABLE_FULL_KERNEL_FUSER"] = "1" if compile_full_all_only else "0"
 
         proc = _run(cmd, env=run_env)
         entry["returncode"] = proc.returncode
+        overall_rc = max(overall_rc, proc.returncode)
+
+        summary: dict[str, Any] = {}
         if run_json.exists():
             try:
-                entry["summary"] = json.loads(run_json.read_text(encoding="utf-8"))
+                summary = json.loads(run_json.read_text(encoding="utf-8"))
+                entry["summary"] = summary
             except json.JSONDecodeError:
                 entry["summary_parse_error"] = True
         else:
             entry["stderr_tail"] = "\n".join(proc.stderr.splitlines()[-40:])
+
+        stdout_log = Path(str(summary.get("artifacts", {}).get("stdout_log") or build_dir / "baseline_stdout.log"))
+        entry["stdout_log"] = str(stdout_log)
+        entry["stdout_tail"] = _tail(stdout_log)
+        entry["execute_status"] = "success" if proc.returncode == 0 else "failed"
+        if summary:
+            entry["bench_runtime_mode"] = str(summary.get("bench_runtime_mode") or "")
+            entry["bench_runtime_reused"] = bool(summary.get("bench_runtime_reused"))
+            entry["pre_gpu_gate"] = dict(summary.get("pre_gpu_gate") or {})
+            entry["collector"] = dict(summary.get("collector") or {})
+            entry["coverage_regions"] = dict(summary.get("coverage_regions") or {})
+            entry["real_toggle_subset"] = dict(summary.get("real_toggle_subset") or {})
+
         results.append(entry)
-        overall_rc = max(overall_rc, proc.returncode)
 
     payload = {
-        "case_name": args.case_name,
-        "designs": designs,
+        "design": "OpenPiton",
+        "configuration": args.configuration,
+        "tests": tests,
         "results": results,
+        "work_dir": str(work_dir),
     }
     _write_json(json_out, payload)
     return overall_rc

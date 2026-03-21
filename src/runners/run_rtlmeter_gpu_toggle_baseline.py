@@ -15,8 +15,8 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
-REPO_SCRIPTS = ROOT_DIR / "scripts"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+REPO_SCRIPTS = ROOT_DIR / "src/scripts"
 RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 RTLMETER_SRC = RTLMETER_ROOT / "src"
 RTLMETER_VENV = ROOT_DIR / "rtlmeter/venv"

@@ -1,0 +1,245 @@
+{
+  "campaign_tuning": {
+    "candidate_count": 515,
+    "shard_count": 2
+  },
+  "convergence_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_convergence_freeze.json",
+  "convergence_profiles": {
+    "campaign": {
+      "best_case_dead_region_count": 0,
+      "best_case_hit": 18,
+      "completed_shards": 2,
+      "plateau_after_shard": 1,
+      "recommended_campaign_candidate_count": 515,
+      "recommended_campaign_shard_count": 2,
+      "recommended_convergence_thresholds": {
+        "max_topk_churn": 0.2,
+        "min_completed_shards": 4,
+        "min_hit_gain_per_1k": 0.25,
+        "min_new_regions_per_1k": 0.05,
+        "stable_shards": 3
+      },
+      "recommended_stop": false,
+      "recommended_stop_at_shard": null,
+      "status": "frozen",
+      "stop_reasons": []
+    }
+  },
+  "execution_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "execution_profiles": {
+    "campaign": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 1.292412,
+      "median_gpu_ms_per_rep": 0.397653,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "multi_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 1.292412,
+      "median_gpu_ms_per_rep": 0.397653,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    },
+    "single_step": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 5,
+      "median_cpu_ms_per_rep": 0.016234,
+      "median_gpu_ms_per_rep": 0.015565,
+      "nstates": 16,
+      "scenario": "single_step_small",
+      "sequential_steps": 1,
+      "status": "frozen"
+    },
+    "sweep": {
+      "compact_match": true,
+      "cpu_reps": 1,
+      "gpu_reps": 3,
+      "median_cpu_ms_per_rep": 1.292412,
+      "median_gpu_ms_per_rep": 0.397653,
+      "nstates": 32,
+      "scenario": "multi_step_medium",
+      "sequential_steps": 48,
+      "status": "frozen"
+    }
+  },
+  "external_actions_required": [],
+  "launch_backend_policy": {
+    "campaign": "source",
+    "multi_step": "source",
+    "reason": "benchmark_frozen_compact_match",
+    "single_step": "source",
+    "status": "default_source",
+    "sweep": "source"
+  },
+  "launch_gate": {
+    "blocked_by": [
+      "first_benchmark_review_pending"
+    ],
+    "can_prepare_launch": true,
+    "can_run_pilot": false
+  },
+  "notes": [
+    "This template mirrors the live medium-block onboarding contract used by edn_main_sm, csrng_main_sm, and entropy_src_main_sm.",
+    "Generic baseline compile support is wired; the next gate is first benchmark review and runtime truth validation."
+  ],
+  "pilot_gate": "Validate EDN reseed progress, alert ping issue/ack, escalation ping issue/ack, invalid-ID skip/rotation, and fail/spurious terminal behavior before any breadth-first GRPO comparison.",
+  "priority": 14,
+  "runner": {
+    "baseline_reference_runner": "/home/takatodo/GEM_try/scripts/run_opentitan_tlul_fifo_sync_trace_gpu_sweep.py",
+    "planned_generic_runner": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/run_opentitan_tlul_slice_trace_gpu_sweep.py",
+    "runner_generalization_required": false
+  },
+  "runner_args_template": {
+    "batch_defaults_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_length": 24,
+    "campaign_gpu_nstates": 512,
+    "campaign_sequential_rep_graph_mode": "auto",
+    "cases": 12000,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/alert_handler_ping_timer_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/alert_handler_ping_timer_gpu_cov_tb.sv",
+    "cpu_reps": 1,
+    "dead_word_bias": true,
+    "debug_internal_output_names": [
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__phase_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__cycle_count_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__progress_cycle_count_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__oracle_semantic_family_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__oracle_semantic_case_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__edn_req_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__edn_ack_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__alert_wait_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__alert_req_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__alert_ack_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__esc_wait_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__esc_req_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__esc_ack_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__skip_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__id_valid_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__esc_rotate_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__alert_fail_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__esc_fail_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__spurious_alert_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__spurious_esc_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__fsm_error_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__non_init_seen_q",
+      "alert_handler_ping_timer_gpu_cov_tb__DOT__activity_seen_q",
+      "debug_state_o",
+      "debug_selected_family_o",
+      "debug_id_to_ping_o",
+      "debug_esc_index_o",
+      "debug_skip_seen_o",
+      "debug_fail_seen_o",
+      "debug_spurious_seen_o"
+    ],
+    "driver_defaults": {
+      "batch_length": 24,
+      "drain_cycles": 16,
+      "req_address_mode": 0,
+      "req_data_mode": 0,
+      "req_family": 0,
+      "req_fill_target": 4,
+      "req_valid_pct": 92,
+      "reset_cycles": 4,
+      "rsp_delay_max": 2,
+      "rsp_error_pct": 12,
+      "rsp_fill_target": 2,
+      "rsp_valid_pct": 94
+    },
+    "global_top_k": 128,
+    "gpu_nstates": 32,
+    "gpu_reps": 3,
+    "gpu_sequential_steps": 48,
+    "keep_top_k": 16,
+    "pilot_campaign_candidate_count": 4096,
+    "pilot_sweep_cases": 256,
+    "profile_family": "mixed",
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/alert_handler_ping_timer.sv",
+    "seed_fanout": 1,
+    "shard_count": 128,
+    "states_per_case": 4,
+    "target": "OpenTitan.alert_handler_ping_timer",
+    "top_module": "alert_handler_ping_timer_gpu_cov_tb",
+    "trace_length": 12,
+    "uniform_states": true,
+    "variants_per_case": 5,
+    "work_dir": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_pilots/alert_handler_ping_timer"
+  },
+  "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "schema_version": "opentitan-tlul-slice-launch-template-v1",
+  "slice_name": "alert_handler_ping_timer",
+  "static_features": {
+    "base_outputs_ready": true,
+    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/alert_handler_ping_timer_coverage_regions.json",
+    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/alert_handler_ping_timer_gpu_cov_tb.sv",
+    "exclusive_word_count": 18,
+    "exclusive_word_fraction": 1.0,
+    "focused_wave_ready": true,
+    "multi_clock": false,
+    "overlap_word_count": 0,
+    "real_toggle_outputs_ready": true,
+    "real_toggle_word_count": 18,
+    "recommended_budget_scale": {
+      "cases": 1.0,
+      "keep_top_k": 1.0
+    },
+    "region_count": 5,
+    "region_names": [
+      "edn_reseed_and_entropy",
+      "alert_wait_issue_ack",
+      "esc_wait_issue_ack",
+      "id_skip_and_rotation",
+      "fail_or_spurious_terminal"
+    ],
+    "required_output_count": 38,
+    "rtl_clock_ports": [
+      "clk_i"
+    ],
+    "rtl_input_port_count": 10,
+    "rtl_output_port_count": 5,
+    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/alert_handler_ping_timer.sv",
+    "rtl_reset_ports": [
+      "rst_ni"
+    ],
+    "schema_version": "opentitan-tlul-slice-static-features-v1",
+    "search_prior_class": "standard",
+    "singleton_region_count": 0,
+    "structural_connectivity": {
+      "assignment_edge_count": 30,
+      "avg_input_reach_fraction": 0.487981,
+      "avg_input_to_output_distance": 4.75,
+      "avg_nonclock_input_degree": 0.875,
+      "instance_block_count": 5,
+      "instance_edge_count": 28,
+      "max_input_to_output_distance": 8,
+      "max_nonclock_input_degree": 1,
+      "min_input_to_output_distance": 2,
+      "nonclock_input_count": 8,
+      "nonclock_output_count": 5,
+      "reachable_output_fraction": 0.3,
+      "reconvergence_proxy_signal_count": 13,
+      "signal_graph_edge_count": 58,
+      "signal_graph_node_count": 52,
+      "structural_connectivity_class": "intermediate_structural_spread"
+    },
+    "target": "OpenTitan.alert_handler_ping_timer",
+    "tb_contract_ready": true,
+    "tb_output_count": 80,
+    "toggle_bitmap_outputs_ready": true,
+    "words_per_region_avg": 3.6,
+    "words_per_region_max": 5,
+    "words_per_region_min": 3
+  },
+  "static_features_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_static_features.json",
+  "status": "onboarding_in_progress",
+  "target": "OpenTitan.alert_handler_ping_timer"
+}

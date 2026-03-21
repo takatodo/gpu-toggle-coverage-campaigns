@@ -9,9 +9,10 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent.parent
 INDEX_JSON = SCRIPT_DIR / "slice_launch_templates" / "index.json"
-RULES_JSON = SCRIPT_DIR / "toggle_coverage_generic_rules.json"
-ASSIGNMENTS_JSON = SCRIPT_DIR / "toggle_coverage_rule_assignments.json"
+RULES_JSON = ROOT_DIR / "config/rules/toggle_coverage_generic_rules.json"
+ASSIGNMENTS_JSON = ROOT_DIR / "config/rules/toggle_coverage_rule_assignments.json"
 SWEEP_RUNNER = SCRIPT_DIR / "run_opentitan_tlul_slice_trace_gpu_sweep.py"
 
 from gpu_runtime_batch_policy import apply_runtime_batch_policy

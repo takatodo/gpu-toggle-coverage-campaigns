@@ -9,8 +9,9 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-RULES_JSON = SCRIPT_DIR / "toggle_coverage_generic_rules.json"
-ASSIGNMENTS_JSON = SCRIPT_DIR / "rtlmeter_design_toggle_rule_assignments.json"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+RULES_JSON = ROOT_DIR / "config/rules/toggle_coverage_generic_rules.json"
+ASSIGNMENTS_JSON = ROOT_DIR / "config/rules/rtlmeter_design_toggle_rule_assignments.json"
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 
 from gpu_runtime_batch_policy import apply_runtime_batch_policy
