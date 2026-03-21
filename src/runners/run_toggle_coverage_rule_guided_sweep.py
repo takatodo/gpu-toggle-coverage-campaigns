@@ -10,10 +10,16 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent
-INDEX_JSON = SCRIPT_DIR / "slice_launch_templates" / "index.json"
+REPO_SCRIPTS = ROOT_DIR / "src/scripts"
+INDEX_JSON = ROOT_DIR / "config/slice_launch_templates" / "index.json"
 RULES_JSON = ROOT_DIR / "config/rules/toggle_coverage_generic_rules.json"
 ASSIGNMENTS_JSON = ROOT_DIR / "config/rules/toggle_coverage_rule_assignments.json"
 SWEEP_RUNNER = SCRIPT_DIR / "run_opentitan_tlul_slice_trace_gpu_sweep.py"
+
+import sys  # noqa: E402
+for _p in (str(REPO_SCRIPTS),):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from gpu_runtime_batch_policy import apply_runtime_batch_policy
 

@@ -16,31 +16,29 @@ import time
 from typing import Any
 
 
-ROOT_DIR = Path("/home/takatodo/GEM_try")
-SCRIPT_DIR = ROOT_DIR / "scripts"
-OUT_DIR = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-ARCHIVE_DIR = OUT_DIR / "archive"
-GPU_BACKEND_DIR = OUT_DIR / "gpu_backend"
-OPENTITAN_SRC = ROOT_DIR / "rtlmeter" / "designs" / "OpenTitan" / "src"
-DEFAULT_BENCH = ROOT_DIR / "verilator/bin/verilator_sim_accel_bench"
-DEFAULT_VERILATOR = ROOT_DIR / "verilator/bin/verilator"
-CUDA_OPT_DIR = ROOT_DIR / "verilator" / "opt" / "gpu" / "cuda"
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent.parent
+REPO_SCRIPTS = SCRIPT_DIR
+OPENTITAN_SRC = ROOT_DIR / "third_party/rtlmeter" / "designs" / "OpenTitan" / "src"
+DEFAULT_BENCH = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench"
+DEFAULT_VERILATOR = ROOT_DIR / "third_party/verilator/bin/verilator"
+CUDA_OPT_DIR = ROOT_DIR / "third_party/verilator" / "opt" / "gpu" / "cuda"
 PREPARE_BENCH_BUNDLE = CUDA_OPT_DIR / "prepare_bench_bundle.py"
 BUILD_BENCH_BUNDLE = CUDA_OPT_DIR / "build_bench_bundle.py"
-BENCH_KERNEL_PARTS_DIR = ROOT_DIR / "verilator" / "bin" / "verilator_sim_accel_bench_kernel"
-GENERATED_DIR_GENERATOR = OUT_DIR / "opentitan_support" / "generate_opentitan_tlul_slice_generated_dirs.py"
+BENCH_KERNEL_PARTS_DIR = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench_kernel"
+GENERATED_DIR_GENERATOR = ROOT_DIR / "src/runners" / "opentitan_support" / "generate_opentitan_tlul_slice_generated_dirs.py"
 DEFAULT_COMPILE_CACHE = Path("/tmp/verilator-sim-accel-compile-cache")
 DEFAULT_GENERATED_DIR_CACHE = Path("/tmp/opentitan_tlul_slice_generated_dir_cache")
 DEFAULT_BUNDLE_CACHE = Path("/tmp/opentitan_tlul_slice_bundle_cache")
 BUNDLE_CACHE_ABI_VERSION = "v6-native-hsaco-promotion"
 GENERATED_DIR_CACHE_ABI_MARKER = ".structured_raw_sidecars_overlay_v2"
-DEFAULT_RUNTIME_CONTRACT_WAIVERS = OUT_DIR / "opentitan_tlul_slice_runtime_contract_waivers.json"
+DEFAULT_RUNTIME_CONTRACT_WAIVERS = ROOT_DIR / "config" / "opentitan_tlul_slice_runtime_contract_waivers.json"
 FOCUSED_WAVE_OUTPUTS = [f"focused_wave_word{i}_o" for i in range(8)]
 FOCUSED_METRIC_OUTPUTS = [f"focused_metric_word{i}_o" for i in range(5)]
 
-for path in (SCRIPT_DIR, ARCHIVE_DIR, GPU_BACKEND_DIR):
-    if str(path) not in sys.path:
-        sys.path.insert(0, str(path))
+for path in (str(REPO_SCRIPTS),):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
 from opentitan_tlul_baseline_common import (  # noqa: E402
@@ -3183,7 +3181,7 @@ def _ensure_generated_dir_unlocked(
     if emit_hsaco:
         cmd.append("--emit-hsaco")
         cmd.extend(["--gfx-arch", gfx_arch])
-    subprocess.run(cmd, cwd=OUT_DIR, check=True)
+    subprocess.run(cmd, cwd=cache_root, check=True)
     if not (all(path.is_file() for path in required) and marker.is_file()):
         raise SystemExit(f"Failed to prepare generated dir for {slice_name}: {fused_dir}")
     return fused_dir
@@ -3403,8 +3401,8 @@ def _run_bundle_backend(
                 build_cmd.extend(["--execution-backend", execution_backend])
                 for attempt in range(3):
                     try:
-                        subprocess.run(prepare_cmd, cwd=OUT_DIR, check=True)
-                        subprocess.run(build_cmd, cwd=OUT_DIR, check=True)
+                        subprocess.run(prepare_cmd, cwd=bundle_dir, check=True)
+                        subprocess.run(build_cmd, cwd=bundle_dir, check=True)
                         _write_bundle_cache_version(
                             bundle_dir,
                             expected_bundle_cache_version,
@@ -3707,7 +3705,7 @@ def main(argv: list[str]) -> int:
         cmd.extend(str(path) for path in source_paths)
 
         env = dict(os.environ)
-        env.setdefault("VERILATOR_ROOT", str(ROOT_DIR / "verilator"))
+        env.setdefault("VERILATOR_ROOT", str(ROOT_DIR / "third_party/verilator"))
         with stdout_out.open("w", encoding="utf-8") as handle:
             proc = subprocess.run(
                 cmd,

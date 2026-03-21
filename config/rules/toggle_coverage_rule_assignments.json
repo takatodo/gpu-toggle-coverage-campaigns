@@ -1,0 +1,371 @@
+{
+  "rows": [
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "large candidate budget",
+        "early plateau stop enabled",
+        "source campaign backend",
+        "best hit remains compact"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 6.258927025623269,
+      "recommended_campaign_candidate_count": 616,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": true,
+      "rule_family": "deep_fifo_source",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 1.5382228777783427,
+      "slice_name": "aes_cipher_control"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 2.357184103781256,
+      "recommended_campaign_candidate_count": 258,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": true,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.628530811545831,
+      "slice_name": "alert_handler_esc_timer"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.2500999615242434,
+      "recommended_campaign_candidate_count": 515,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 1.0429810472213297,
+      "slice_name": "alert_handler_ping_timer"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 2.369022492439516,
+      "recommended_campaign_candidate_count": 890,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.5144942434210525,
+      "slice_name": "csrng_main_sm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.2645687645687644,
+      "recommended_campaign_candidate_count": 616,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.6285578182684292,
+      "slice_name": "edn_main_sm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 1.700505396625582,
+      "recommended_campaign_candidate_count": 740,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.5586893671699326,
+      "slice_name": "entropy_src_main_sm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 5.4575679050470605,
+      "recommended_campaign_candidate_count": 210,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 1.587675381667594,
+      "slice_name": "lc_ctrl_fsm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 2.7569635416666665,
+      "recommended_campaign_candidate_count": 300,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.7104378872204137,
+      "slice_name": "pwrmgr_fsm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 2.673955998406381,
+      "recommended_campaign_candidate_count": 515,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.5742761948529412,
+      "slice_name": "rom_ctrl_fsm"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.578279903834035,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.7258023498296119,
+      "slice_name": "tlul_err"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.4163826549932765,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.9844079458439685,
+      "slice_name": "tlul_fifo_async"
+    },
+    {
+      "best_case_hit": 8,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 5.2659718395414625,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.5951481185001524,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 3.1200744765740778,
+      "slice_name": "tlul_fifo_sync"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 1.4774402519998031,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 0.3610401408050872,
+      "slice_name": "tlul_request_loopback"
+    },
+    {
+      "best_case_hit": 0,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 32,
+      "hit_per_wall_s": 0.0,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 6.429027706411542,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 2.1750865051903117,
+      "slice_name": "tlul_sink"
+    },
+    {
+      "best_case_hit": 11,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 256,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "small candidate budget",
+        "high hit density",
+        "source kept for campaign"
+      ],
+      "gpu_nstates": 64,
+      "hit_per_wall_s": 24.325314944658082,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 5.97868963748548,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "compact_socket_source",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 2.203380281690141,
+      "slice_name": "tlul_socket_1n"
+    },
+    {
+      "best_case_hit": 9,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 64,
+      "hit_per_wall_s": 17.271030195346682,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 3.7240295410156254,
+      "recommended_campaign_candidate_count": 200,
+      "recommended_campaign_shard_count": 2,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 2.550401427297056,
+      "slice_name": "tlul_socket_m1"
+    },
+    {
+      "best_case_hit": 4,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 64,
+      "hit_per_wall_s": 5.6406364320256825,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 9.791707234147774,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 6.097957149975087,
+      "slice_name": "xbar_main"
+    },
+    {
+      "best_case_hit": 6,
+      "campaign_backend": "source",
+      "campaign_gpu_nstates": 512,
+      "campaign_gpu_vs_cpu_hit_ratio": 0.0,
+      "classification_reasons": [
+        "fallback balanced source rule"
+      ],
+      "gpu_nstates": 64,
+      "hit_per_wall_s": 12.298808808648115,
+      "multi_step_backend": "source",
+      "multi_step_gpu_speedup": 2.917884114583333,
+      "recommended_campaign_candidate_count": 0,
+      "recommended_campaign_shard_count": 0,
+      "recommended_stop": false,
+      "rule_family": "balanced_source_general",
+      "single_step_backend": "source",
+      "single_step_gpu_speedup": 1.1910367076466999,
+      "slice_name": "xbar_peri"
+    }
+  ],
+  "schema_version": "toggle-coverage-rule-assignments-v1",
+  "source_rules_json": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/toggle_coverage_generic_rules.json"
+}
