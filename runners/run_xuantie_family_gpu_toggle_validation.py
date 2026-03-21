@@ -14,6 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("XuanTie-E902", "XuanTie-E906")
+DEFAULT_WORK_DIR = ROOT_DIR / "work"
 DEFAULT_TESTS = {
     "XuanTie-E902": "memcpy",
     "XuanTie-E906": "cmark",
@@ -51,7 +52,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         description="Run gpu_cov baseline validation across the XuanTie family."
     )
-    parser.add_argument("--work-dir", type=Path, required=True)
+    parser.add_argument("--work-dir", type=Path, default=DEFAULT_WORK_DIR)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument(
         "--configuration",

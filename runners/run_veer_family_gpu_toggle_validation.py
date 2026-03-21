@@ -15,6 +15,7 @@ ROOT_DIR = SCRIPT_DIR.parent
 RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("VeeR-EL2", "VeeR-EH1", "VeeR-EH2")
+DEFAULT_WORK_DIR = ROOT_DIR / "work"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -39,7 +40,7 @@ def _run(
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Run gpu_cov baseline validation across the VeeR family.")
-    parser.add_argument("--work-dir", type=Path, required=True)
+    parser.add_argument("--work-dir", type=Path, default=DEFAULT_WORK_DIR)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--case-name", default="hello")
     parser.add_argument("--design", dest="designs", action="append")
