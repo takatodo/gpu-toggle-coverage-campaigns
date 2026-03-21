@@ -14,16 +14,16 @@ import sys
 from typing import Any
 
 
-ROOT_DIR = Path("~/GEM_try")
 SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent
 REPO_SCRIPTS = ROOT_DIR / "scripts"
-RTLMETER_ROOT = ROOT_DIR / "rtlmeter"
+RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 RTLMETER_SRC = RTLMETER_ROOT / "src"
-RTLMETER_VENV = RTLMETER_ROOT / "venv"
+RTLMETER_VENV = ROOT_DIR / "rtlmeter/venv"
 RTLMETER_BIN = RTLMETER_ROOT / "rtlmeter"
-DEFAULT_BENCH = ROOT_DIR / "verilator/bin/verilator_sim_accel_bench"
-DEFAULT_VERILATOR = ROOT_DIR / "verilator/bin/verilator"
-DEFAULT_PRELOAD_MATERIALIZE = ROOT_DIR / "verilator/bin/verilator_sim_accel_materialize_preload"
+DEFAULT_BENCH = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench"
+DEFAULT_VERILATOR = ROOT_DIR / "third_party/verilator/bin/verilator"
+DEFAULT_PRELOAD_MATERIALIZE = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_materialize_preload"
 DEFAULT_COMPILE_CACHE = Path("/tmp/verilator-sim-accel-compile-cache")
 PREGPU_VALIDATION_TIMEOUT_S = 90
 
@@ -2640,7 +2640,7 @@ def main(argv: list[str]) -> int:
         bench_runtime_reused = True
 
     env = dict(os.environ)
-    env.setdefault("VERILATOR_ROOT", str(ROOT_DIR / "verilator"))
+    env.setdefault("VERILATOR_ROOT", str(ROOT_DIR / "third_party/verilator"))
     env["SIM_ACCEL_COMPILE_FULL_ALL_ONLY"] = "1" if ns.compile_full_all_only else "0"
     env["SIM_ACCEL_ENABLE_FULL_KERNEL_FUSER"] = "1" if ns.compile_full_all_only else "0"
     with stdout_log.open("w", encoding="utf-8") as handle:

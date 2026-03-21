@@ -11,7 +11,7 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
+ROOT_DIR = SCRIPT_DIR.parent
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("XuanTie-E902", "XuanTie-E906")
 DEFAULT_TESTS = {

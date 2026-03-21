@@ -11,8 +11,8 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent.parent
-RTLMETER_ROOT = ROOT_DIR / "rtlmeter"
+ROOT_DIR = SCRIPT_DIR.parent
+RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("VeeR-EL2", "VeeR-EH1", "VeeR-EH2")
 
