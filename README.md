@@ -1,102 +1,94 @@
 # GPU Toggle Coverage Campaigns
 
-GPU-accelerated RTL toggle coverage collection, rule management, and multi-design expansion using [RTLMeter](https://github.com/googleresearch/rtlmeter).
+GPU-accelerated RTL toggle coverage collection across multiple open-source RISC-V and SoC designs, using [RTLMeter](https://github.com/verilator/rtlmeter) and a custom Verilator sim-accel backend.
 
-## Overview
+## Architecture
 
-This repository contains the frozen canonical artifacts for a GPU-accelerated toggle coverage campaign targeting multiple open-source RTL designs. The core output is a **generic rule family** — a set of per-design toggle coverage configurations validated across OpenTitan, VeeR, XuanTie, XiangShan, BlackParrot, OpenPiton, and Vortex — plus the tooling to run, validate, and extend them.
+```
+RTL (SystemVerilog)
+    │
+    └─[Verilator sim-accel fork]─→ CUDA kernel → GPU parallel simulation
+                                                        │
+                                               toggle coverage bits
+```
 
-## Frozen Rule Families
-
-| Rule | Anchor Design | Backend | nstates |
-|------|--------------|---------|--------:|
-| `deep_fifo_source` | tlul_fifo_async | source | 512 |
-| `compact_socket_source` | tlul_socket_1n | source | 256 |
-| `mixed_source_campaign_circt_multistep` | tlul_socket_m1, xbar_peri | source + circt-cubin | 512 |
-| `dense_xbar_circt` | xbar_main | circt-cubin | 512 |
-| `balanced_source_general` | tlul_fifo_sync, tlul_err, tlul_request_loopback | source | 512 |
-
-Status: `scope_limited_final_freeze` — supported by OpenTitan slice validation, Tier-1/2 A/B/C evidence, and late-family `gpu_cov_gate` prechecks on VeeR and XuanTie.
+`sim-accel` is a prototype for a future Verilator MLIR emitter (→ CIRCT GPU backend). It generates CUDA kernels from Verilator's C++ output to run RTL simulation across many initial states in parallel.
 
 ## Repository Structure
 
-### Read First
+```
+src/
+├── runners/        Execution scripts (run_veer_*, run_xuantie_*, run_openpiton_*, ...)
+├── scripts/        Shared utilities and test scripts
+├── generators/     Artifact generation scripts
+├── grpo/           GRPO policy scripts
+├── rocm/           ROCm backend scripts
+├── meta/           Inventory management
+└── torch_env/      Torch environment setup
 
-| File | Purpose |
-|------|---------|
-| `metrics_driven_final_rule_packet.md` | Frozen rule packet with full validation evidence |
-| `toggle_coverage_generic_rules.md` | Rule family table and defaults |
-| `generic_toggle_coverage_rule_plan.md` | High-level plan and current status |
-| `runtime_runner_scope.md` | Mainline runners vs. scoped-out debug paths |
-| `design_scope_expansion_packet.md` | Next design expansion order |
+config/
+├── rules/                  Toggle coverage rule definitions (input to runners)
+└── slice_launch_templates/ OpenTitan TLUL slice JSON templates
 
-### Mainline Runners
+third_party/
+├── rtlmeter/   takatodo/rtlmeter fork, feature/gpu-cov (gpu_cov + gpu_cov_gate designs)
+├── verilator/  takatodo/verilator fork, feature/sim-accel-pr-clean-v2
+└── circt/      llvm/circt (reference)
 
-| Script | Purpose |
-|--------|---------|
-| `run_rtlmeter_gpu_toggle_baseline.py` | GPU baseline runner (defaults to direct bench reuse) |
-| `run_rtlmeter_design_rule_guided_sweep.py` | Rule-guided GPU sweep with device-aware batching |
-| `run_veer_family_gpu_toggle_validation.py` | VeeR family (EL2/EH1/EH2) gpu_cov_gate validation |
-| `run_xuantie_family_gpu_toggle_validation.py` | XuanTie family (C906/C910/E902/E906) gpu_cov_gate validation |
-| `run_toggle_coverage_rule_guided_sweep.py` | Generic toggle coverage rule-guided sweep |
+rtlmeter/       Python venv + requirements
+work/           Build artifacts and GPU sim outputs (gitignored)
+output/         Generated research artifacts: readiness reports, validation results (gitignored)
+```
 
-### Canonical Generators
+## Setup
 
-Scripts that regenerate the frozen artifacts from source data:
+```bash
+git clone --recurse-submodules <this-repo>
 
-| Script | Regenerates |
-|--------|-------------|
-| `freeze_metrics_driven_final_rule_packet.py` | Final frozen rule packet |
-| `derive_toggle_coverage_generic_rules.py` | Generic rule family table |
-| `freeze_design_scope_expansion.py` | Scope expansion order |
-| `freeze_runtime_runner_scope.py` | Runtime runner boundary |
-| `derive_rtlmeter_design_toggle_rule_assignments.py` | Per-design rule assignments |
-| `extract_rtlmeter_design_toggle_features.py` | Per-design feature rows |
-| `assess_rtlmeter_design_gpu_toggle_candidates.py` | Candidate ranking across designs |
+# Install RTLMeter Python deps
+python3 -m venv rtlmeter/venv
+rtlmeter/venv/bin/pip install -r rtlmeter/python-requirements.txt
 
-### Cross-Design Validation
+# Build verilator_bin from source (or copy pre-built binary)
+# third_party/verilator/bin/verilator_bin must exist before running
+```
 
-| File | Purpose |
-|------|---------|
-| `rtlmeter_design_generic_rule_validation.md` | Actual GPU and late-family gate validation summary |
-| `rtlmeter_design_gpu_toggle_candidates.md` | Candidate ranking across RTLMeter designs |
-| `rtlmeter_design_toggle_features.md` | Per-design feature and readiness breakdown |
-| `metrics_driven_gpu_validation_matrix.md` | Tiered A/B/C validation matrix |
+## Running
 
-### OpenTitan Slice Artifacts
+```bash
+# VeeR family (EL2/EH1/EH2) — outputs to work/
+python3 src/runners/run_veer_family_gpu_toggle_validation.py
 
-| File | Purpose |
-|------|---------|
-| `opentitan_tlul_slice_production_defaults.md` | Frozen production defaults per slice |
-| `opentitan_tlul_slice_backend_selection.md` | Backend selection result (CIRCT vs. Verilator) |
-| `opentitan_tlul_slice_convergence_freeze.md` | Convergence freeze used by rule derivation |
-| `opentitan_tlul_slice_cpu_vs_gpu_campaign_efficiency.md` | CPU/GPU campaign efficiency comparison |
+# XuanTie family
+python3 src/runners/run_xuantie_family_gpu_toggle_validation.py
 
-### Family Readiness
-
-Per-design bring-up status and validation evidence:
-`veer_family`, `veer_el2`, `xuantie_family`, `vortex`, `xiangshan`, `blackparrot`
+# Single baseline run
+python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
+    --case VeeR-EL2:gpu_cov_gate:hello \
+    --build-dir work/VeeR-EL2/gpu_cov_gate \
+    --nstates 16 --gpu-reps 1
+```
 
 ## Design Coverage Status
 
-| Design | Family | Validation | Rule |
-|--------|--------|-----------|------|
+| Design | Family | Status | Rule |
+|--------|--------|--------|------|
 | VeeR-EL2/EH1/EH2 | VeeR | gate_validated | balanced_source_general |
 | XuanTie-E902/E906 | XuanTie | actual_gpu (18/18) | balanced_source_general |
 | XuanTie-C906/C910 | XuanTie | actual_gpu | balanced_source_general |
-| Vortex | Tier-2 | actual_gpu | balanced_source_general |
-| XiangShan | Fallback | actual_gpu | balanced_source_general |
-| BlackParrot | Fallback | actual_gpu | balanced_source_general |
-| OpenPiton | Fallback | actual_gpu | balanced_source_general |
+| Vortex | — | actual_gpu | balanced_source_general |
+| XiangShan | — | actual_gpu | balanced_source_general |
+| BlackParrot | — | actual_gpu | balanced_source_general |
+| OpenPiton | — | actual_gpu | balanced_source_general |
 | OpenTitan | Slice scope | slice_scope_validated | (per-slice) |
 | Caliptra | Phase 4 | gpu_cov_codegen_proven | TBD |
 
-## Next Expansion
+## Known Issues
 
-The next bring-up target after the current frozen scope is **Caliptra** (phase 4, large integration design). See `design_scope_expansion_packet.md` for the full ordered list.
+- **VeeR GPU sim coverage 0/18**: `always_ff` conditional branch semantics lost in CUDA text generation (sim-accel architectural limitation). RTL simulation passes correctly.
 
 ## Prerequisites
 
-- [RTLMeter](https://github.com/googleresearch/rtlmeter)
-- GPU with ROCm or CUDA support
+- CUDA-capable GPU (sm_80+) or ROCm
 - Python 3.10+
+- nvcc / ROCm HIP compiler
