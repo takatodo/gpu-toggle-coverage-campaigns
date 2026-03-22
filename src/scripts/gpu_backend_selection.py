@@ -4,7 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from gpu_runtime_batch_policy import classify_gpu_runtime_tier
+try:
+    from .gpu_runtime_batch_policy import classify_gpu_runtime_tier
+except ImportError:
+    from gpu_runtime_batch_policy import classify_gpu_runtime_tier
 
 
 PLAN_MD = Path("/tmp/audit_llvm_backend_readiness/llvm_backend_portability_plan.md")

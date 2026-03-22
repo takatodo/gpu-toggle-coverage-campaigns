@@ -7,7 +7,7 @@ import sys
 import unittest
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 MODULE_PATH = SCRIPT_DIR / "report_opentitan_tlul_surface_results.py"
 
 

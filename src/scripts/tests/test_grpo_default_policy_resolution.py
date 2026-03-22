@@ -11,7 +11,7 @@ import unittest
 from unittest import mock
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 RUNNER_PATH = SCRIPT_DIR.parent / "grpo/run_gpro_coverage_improvement.py"
 
 

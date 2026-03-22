@@ -7,7 +7,7 @@ import sys
 import unittest
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 AXES_MODULE_PATH = SCRIPT_DIR.parent / "grpo/report_grpo_ab_evaluation_axes.py"
 COMMON_MODULE_PATH = SCRIPT_DIR / "grpo_coverage_common.py"
 

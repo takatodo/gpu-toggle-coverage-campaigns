@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 REPORT_PATH = SCRIPT_DIR.parent / "grpo/report_grpo_reward_alignment.py"
 
 

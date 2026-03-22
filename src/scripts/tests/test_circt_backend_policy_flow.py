@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 BASELINE_MODULE_PATH = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
 PRODUCTION_DEFAULTS_MODULE_PATH = SCRIPT_DIR / "freeze_opentitan_tlul_slice_production_defaults.py"
 

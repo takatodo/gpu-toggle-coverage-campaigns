@@ -14,8 +14,12 @@ REPO_SCRIPTS = SCRIPT_DIR
 if str(REPO_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(REPO_SCRIPTS))
 
-from opentitan_tlul_baseline_common import load_batch_overrides  # noqa: E402
-from opentitan_tlul_trace_search_common import DRIVER_DEFAULTS as TRACE_DRIVER_DEFAULTS  # noqa: E402
+try:
+    from .opentitan_tlul_baseline_common import load_batch_overrides  # noqa: E402
+    from .opentitan_tlul_trace_search_common import DRIVER_DEFAULTS as TRACE_DRIVER_DEFAULTS  # noqa: E402
+except ImportError:
+    from opentitan_tlul_baseline_common import load_batch_overrides  # noqa: E402
+    from opentitan_tlul_trace_search_common import DRIVER_DEFAULTS as TRACE_DRIVER_DEFAULTS  # noqa: E402
 
 
 DRIVER_PATCH_KEYS = (

@@ -40,27 +40,50 @@ for path in (str(REPO_SCRIPTS),):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
-from opentitan_tlul_baseline_common import (  # noqa: E402
-    estimate_sync_sequential_steps,
-    load_batch_case_manifest,
-    load_batch_overrides,
-)
-from rtlmeter_sim_accel_adapter import (  # noqa: E402
-    build_collector_summary,
-    extract_sim_accel_output_slot_values,
-    parse_bench_log,
-    populate_collector_coverage,
-    sha256_hex_bytes,
-)
-from opentitan_tlul_slice_contracts import (  # noqa: E402
-    REQUIRED_OUTPUTS_FLAT,
-    validate_slice_contract,
-)
-from gpu_backend_selection import (  # noqa: E402
-    ensure_gpu_execution_backend_supported,
-    resolve_gpu_execution_backend,
-)
+try:
+    from .opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
+    from .opentitan_tlul_baseline_common import (  # noqa: E402
+        estimate_sync_sequential_steps,
+        load_batch_case_manifest,
+        load_batch_overrides,
+    )
+    from .rtlmeter_sim_accel_adapter import (  # noqa: E402
+        build_collector_summary,
+        extract_sim_accel_output_slot_values,
+        parse_bench_log,
+        populate_collector_coverage,
+        sha256_hex_bytes,
+    )
+    from .opentitan_tlul_slice_contracts import (  # noqa: E402
+        REQUIRED_OUTPUTS_FLAT,
+        validate_slice_contract,
+    )
+    from .gpu_backend_selection import (  # noqa: E402
+        ensure_gpu_execution_backend_supported,
+        resolve_gpu_execution_backend,
+    )
+except ImportError:
+    from opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
+    from opentitan_tlul_baseline_common import (  # noqa: E402
+        estimate_sync_sequential_steps,
+        load_batch_case_manifest,
+        load_batch_overrides,
+    )
+    from rtlmeter_sim_accel_adapter import (  # noqa: E402
+        build_collector_summary,
+        extract_sim_accel_output_slot_values,
+        parse_bench_log,
+        populate_collector_coverage,
+        sha256_hex_bytes,
+    )
+    from opentitan_tlul_slice_contracts import (  # noqa: E402
+        REQUIRED_OUTPUTS_FLAT,
+        validate_slice_contract,
+    )
+    from gpu_backend_selection import (  # noqa: E402
+        ensure_gpu_execution_backend_supported,
+        resolve_gpu_execution_backend,
+    )
 
 
 def _write_json(path: Path, payload: dict[str, Any], *, compact: bool) -> None:

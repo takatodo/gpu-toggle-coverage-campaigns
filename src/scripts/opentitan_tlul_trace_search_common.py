@@ -11,7 +11,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from opentitan_tlul_sync_crv import SYNC_DEAD_WORD_PROFILES, SYNC_GRAMMAR_PROFILES  # noqa: E402
+try:
+    from .opentitan_tlul_sync_crv import SYNC_DEAD_WORD_PROFILES, SYNC_GRAMMAR_PROFILES  # noqa: E402
+except ImportError:
+    from opentitan_tlul_sync_crv import SYNC_DEAD_WORD_PROFILES, SYNC_GRAMMAR_PROFILES  # noqa: E402
 
 
 TARGET_REGION_BY_VARIANT = {

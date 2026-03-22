@@ -7,7 +7,7 @@ import sys
 import unittest
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 GRPO_COMMON_PATH = SCRIPT_DIR / "grpo_coverage_common.py"
 DATASET_BUILDER_PATH = SCRIPT_DIR.parent / "grpo/build_grpo_offline_dataset.py"
 

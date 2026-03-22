@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 ROOT_DIR = SCRIPT_DIR.parents[1]
 MANIFEST_PATH = ROOT_DIR / "work/source_stage/OpenTitan/tests/alert_handler_ping_timer_coverage_regions.json"
 TEMPLATE_PATH = ROOT_DIR / "config/slice_launch_templates/alert_handler_ping_timer.json"

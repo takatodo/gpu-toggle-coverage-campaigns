@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import unittest
 
-_RUNNERS_DIR = Path(__file__).resolve().parents[1] / "runners"
+_RUNNERS_DIR = Path(__file__).resolve().parents[2] / "runners"
 if str(_RUNNERS_DIR) not in sys.path:
     sys.path.insert(0, str(_RUNNERS_DIR))
 
