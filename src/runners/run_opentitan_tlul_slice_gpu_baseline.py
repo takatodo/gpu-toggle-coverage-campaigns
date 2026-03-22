@@ -18,7 +18,7 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent
-REPO_SCRIPTS = SCRIPT_DIR
+REPO_SCRIPTS = SCRIPT_DIR.parent / "scripts"
 OPENTITAN_SRC = ROOT_DIR / "third_party/rtlmeter" / "designs" / "OpenTitan" / "src"
 DEFAULT_BENCH = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench"
 DEFAULT_VERILATOR = ROOT_DIR / "third_party/verilator/bin/verilator"
@@ -41,8 +41,8 @@ for path in (str(REPO_SCRIPTS),):
         sys.path.insert(0, path)
 
 try:
-    from .opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
-    from .opentitan_tlul_baseline_common import (  # noqa: E402
+    from ..scripts.opentitan_coverage_regions import load_region_manifest, summarize_regions  # noqa: E402
+    from ..scripts.opentitan_tlul_baseline_common import (  # noqa: E402
         estimate_sync_sequential_steps,
         load_batch_case_manifest,
         load_batch_overrides,
@@ -54,11 +54,11 @@ try:
         populate_collector_coverage,
         sha256_hex_bytes,
     )
-    from .opentitan_tlul_slice_contracts import (  # noqa: E402
+    from ..scripts.opentitan_tlul_slice_contracts import (  # noqa: E402
         REQUIRED_OUTPUTS_FLAT,
         validate_slice_contract,
     )
-    from .gpu_backend_selection import (  # noqa: E402
+    from ..scripts.gpu_backend_selection import (  # noqa: E402
         ensure_gpu_execution_backend_supported,
         resolve_gpu_execution_backend,
     )

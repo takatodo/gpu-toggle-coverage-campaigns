@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
-ROLLOUT_STATUS_PATH = SCRIPT_DIR / "report_opentitan_tlul_slice_rollout_status.py"
-SURFACE_RESULTS_PATH = SCRIPT_DIR / "report_opentitan_tlul_surface_results.py"
+ROLLOUT_STATUS_PATH = SCRIPT_DIR.parent / "tools" / "report_opentitan_tlul_slice_rollout_status.py"
+SURFACE_RESULTS_PATH = SCRIPT_DIR.parent / "tools" / "report_opentitan_tlul_surface_results.py"
 
 
 def _load_module(path: Path, name: str):

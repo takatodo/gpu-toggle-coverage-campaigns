@@ -9,7 +9,8 @@ import tempfile
 import unittest
 
 
-MODULE_PATH = Path(__file__).resolve().parent / "run_opentitan_tlul_slice_backend_compare.py"
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
+MODULE_PATH = SCRIPT_DIR.parent / "runners" / "run_opentitan_tlul_slice_backend_compare.py"
 
 
 def _load_module():

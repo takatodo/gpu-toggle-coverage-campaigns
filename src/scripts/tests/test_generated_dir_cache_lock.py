@@ -10,7 +10,7 @@ from unittest import mock
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
-BASELINE_MODULE_PATH = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
+BASELINE_MODULE_PATH = SCRIPT_DIR.parent / "runners" / "run_opentitan_tlul_slice_gpu_baseline.py"
 
 
 def _load_module(name: str, path: Path):

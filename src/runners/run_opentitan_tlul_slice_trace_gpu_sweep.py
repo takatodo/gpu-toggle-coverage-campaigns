@@ -15,7 +15,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent
 REPO_SCRIPTS = ROOT_DIR / "src/scripts"
-GPU_RUNNER = ROOT_DIR / "src/scripts/run_opentitan_tlul_slice_gpu_baseline.py"
+GPU_RUNNER = ROOT_DIR / "src/runners/run_opentitan_tlul_slice_gpu_baseline.py"
 
 for path in (str(REPO_SCRIPTS),):
     if path not in sys.path:

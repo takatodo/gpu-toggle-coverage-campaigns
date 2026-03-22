@@ -8,7 +8,7 @@ import unittest
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
-MODULE_PATH = SCRIPT_DIR / "report_opentitan_tlul_surface_results.py"
+MODULE_PATH = SCRIPT_DIR.parent / "tools" / "report_opentitan_tlul_surface_results.py"
 
 
 def _load_module(name: str, path: Path):

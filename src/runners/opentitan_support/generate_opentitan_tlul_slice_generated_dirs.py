@@ -14,7 +14,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent.parent.parent
 SLICE_INDEX_JSON = ROOT_DIR / "config/slice_launch_templates/index.json"
-BASELINE_SCRIPT = ROOT_DIR / "src/scripts/run_opentitan_tlul_slice_gpu_baseline.py"
+BASELINE_SCRIPT = ROOT_DIR / "src/runners/run_opentitan_tlul_slice_gpu_baseline.py"
 HDL_TO_FULL_ALL = ROOT_DIR / "src/sim_accel/hdl_to_full_all.py"
 STRUCTURED_RAW_OVERLAY_MARKER = ".structured_raw_sidecars_overlay_v2"
 

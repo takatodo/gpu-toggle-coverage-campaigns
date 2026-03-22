@@ -13,7 +13,7 @@ MANIFEST_PATH = ROOT_DIR / "work/source_stage/OpenTitan/tests/alert_handler_ping
 TEMPLATE_PATH = ROOT_DIR / "config/slice_launch_templates/alert_handler_ping_timer.json"
 SCAFFOLD_PATH = ROOT_DIR / "work/slice_scaffolds/alert_handler_ping_timer/campaign_request.json"
 TB_PATH = ROOT_DIR / "work/source_stage/OpenTitan/src/alert_handler_ping_timer_gpu_cov_tb.sv"
-BASELINE_PATH = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
+BASELINE_PATH = SCRIPT_DIR.parent / "runners" / "run_opentitan_tlul_slice_gpu_baseline.py"
 RTL_PATH = ROOT_DIR / "third_party/rtlmeter/designs/OpenTitan/src/alert_handler_ping_timer.sv"
 SEARCH_TUNING_PATH = SCRIPT_DIR / "opentitan_tlul_slice_search_tuning.py"
 
