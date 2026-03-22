@@ -11,7 +11,7 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-RUNNER = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
+RUNNER = SCRIPT_DIR.parent / "runners" / "run_opentitan_tlul_slice_gpu_baseline.py"
 TEMPLATE = SCRIPT_DIR / "slice_launch_templates" / "tlul_fifo_sync.json"
 DEFAULT_OUT_DIR = Path("/tmp/rocm_tlul_fifo_sync_runner_smoke_v3")
 DEFAULT_JSON = SCRIPT_DIR / "rocm_mainline_runner_smoke.json"
