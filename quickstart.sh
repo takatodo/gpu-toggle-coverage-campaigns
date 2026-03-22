@@ -100,7 +100,7 @@ fi
 
 # ── 6. Smoke run ─────────────────────────────────────────────────────────────
 echo
-echo "[6/6] Smoke run — VeeR-EL2 gpu_cov_gate (nstates=4, gpu-reps=1)"
+echo "[6/6] Smoke run — VeeR-EL2 gpu_cov_gate (nstates=256, gpu-reps=1)"
 if [ "$SKIP_RUN" -eq 1 ]; then
   warn "skipped (--skip-run)"
 elif [ "$GPU_OK" -eq 0 ]; then
@@ -112,30 +112,30 @@ else
   JSON_OUT="$WORK_DIR/baseline.json"
   mkdir -p "$WORK_DIR"
   echo "  output → $WORK_DIR"
-  # Skip pre-GPU gate (CPU RTL sim) — it runs ~3 min every time and is not
-  # needed for a quickstart smoke test where we just want GPU execution.
+  # Capture JSON from stdout (bench_kernel reuse writes to stdout, not file).
+  # Skip pre-GPU gate — CPU RTL sim runs ~3 min and is not needed here.
   echo
-  python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
+  GPU_JSON=$(python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
     --case VeeR-EL2:gpu_cov_gate:hello \
     --build-dir "$WORK_DIR" \
-    --nstates 4 \
+    --nstates 256 \
     --gpu-reps 1 \
     --skip-cpu-reference-build \
     --pre-gpu-gate never \
-    2>&1 | grep -v '^{' || true
+    2>/dev/null | grep '^{' | tail -1)
   echo
-  if [ -f "$JSON_OUT" ]; then
+  if [ -n "$GPU_JSON" ]; then
     python3 -c "
-import json, subprocess
+import json, subprocess, sys
 
-b = json.load(open('$JSON_OUT'))
+b = json.loads('''$GPU_JSON''')
 cov  = b['collector']['coverage']
 perf = b['collector']['performance']
 hits  = cov.get('coverage_points_hit', '?')
 total = cov.get('coverage_points_total', '?')
 gpu_ms = perf.get('gpu_ms_per_rep') or 0.0
 
-# CPU: run bench_kernel directly with gpu-reps=0 cpu-reps=1
+# CPU: invoke bench_kernel directly with same nstates, cpu-reps=1, gpu-reps=0
 cpu_ms = None
 rt_cmd = b.get('bench_runtime_command', [])
 if rt_cmd:
@@ -150,7 +150,7 @@ if rt_cmd:
             try: cpu_ms = float(line.split('=')[1])
             except: pass
 
-WINDOW = 30_000  # ms
+WINDOW = 30_000
 gpu_per_30s = int(WINDOW / gpu_ms) if gpu_ms > 0 else '?'
 cpu_per_30s = int(WINDOW / cpu_ms) if cpu_ms and cpu_ms > 0 else '?'
 
@@ -159,12 +159,11 @@ print(f'  GPU      : {gpu_ms:.0f} ms/rep  → {gpu_per_30s} sims in 30 s')
 if cpu_ms and cpu_ms > 0:
     ratio = cpu_ms / gpu_ms if gpu_ms > 0 else 0
     label = f'{ratio:.1f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
-    print(f'  CPU      : {cpu_ms:.0f} ms/rep  → {cpu_per_30s} sims in 30 s  (GPU is {label} at nstates=4)')
-    print(f'  note     : GPU advantage grows with --nstates (at 256: GPU ~92x faster than CPU)')
-" 2>/dev/null || echo "  done (see $JSON_OUT)"
+    print(f'  CPU      : {cpu_ms:.0f} ms/rep  → {cpu_per_30s} sims in 30 s  (GPU is {label})')
+" 2>/dev/null || echo "  done (see $WORK_DIR)"
     ok "VeeR-EL2 smoke run complete"
   else
-    ok "VeeR-EL2 smoke run complete"
+    ok "VeeR-EL2 smoke run complete (see $WORK_DIR)"
   fi
   echo
   echo -e "${GREEN}All done.${RESET} Next steps:"
