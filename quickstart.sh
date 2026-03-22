@@ -125,19 +125,44 @@ else
     2>&1 | grep -v '^{' || true
   echo
   if [ -f "$JSON_OUT" ]; then
-    TOGGLE_SUMMARY=$(python3 -c "
-import json
+    python3 -c "
+import json, subprocess
+
 b = json.load(open('$JSON_OUT'))
-cov = b['collector']['coverage']
+cov  = b['collector']['coverage']
 perf = b['collector']['performance']
 hits  = cov.get('coverage_points_hit', '?')
 total = cov.get('coverage_points_total', '?')
-gpu_ms = perf.get('gpu_ms_per_rep')
-timing = f'{gpu_ms:.0f}ms/rep' if isinstance(gpu_ms, (int, float)) else ''
-suffix = f'  ({timing})' if timing else ''
-print(f'{hits}/{total} toggle points covered{suffix}')
-" 2>/dev/null || echo "done (see $JSON_OUT)")
-    ok "VeeR-EL2 smoke run complete — $TOGGLE_SUMMARY"
+gpu_ms = perf.get('gpu_ms_per_rep') or 0.0
+
+# CPU: run bench_kernel directly with gpu-reps=0 cpu-reps=1
+cpu_ms = None
+rt_cmd = b.get('bench_runtime_command', [])
+if rt_cmd:
+    cmd = rt_cmd[:]
+    for i, v in enumerate(cmd):
+        if v == '--cpu-reps':        cmd[i+1] = '1'
+        if v == '--gpu-reps':        cmd[i+1] = '0'
+        if v == '--gpu-warmup-reps': cmd[i+1] = '0'
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    for line in r.stdout.splitlines():
+        if line.startswith('cpu_ms_per_rep='):
+            try: cpu_ms = float(line.split('=')[1])
+            except: pass
+
+WINDOW = 30_000  # ms
+gpu_per_30s = int(WINDOW / gpu_ms) if gpu_ms > 0 else '?'
+cpu_per_30s = int(WINDOW / cpu_ms) if cpu_ms and cpu_ms > 0 else '?'
+
+print(f'  coverage : {hits}/{total} toggle points')
+print(f'  GPU      : {gpu_ms:.0f} ms/rep  → {gpu_per_30s} sims in 30 s')
+if cpu_ms and cpu_ms > 0:
+    ratio = cpu_ms / gpu_ms if gpu_ms > 0 else 0
+    label = f'{ratio:.1f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
+    print(f'  CPU      : {cpu_ms:.0f} ms/rep  → {cpu_per_30s} sims in 30 s  (GPU is {label} at nstates=4)')
+    print(f'  note     : GPU advantage grows with --nstates (try 256+)')
+" 2>/dev/null || echo "  done (see $JSON_OUT)"
+    ok "VeeR-EL2 smoke run complete"
   else
     ok "VeeR-EL2 smoke run complete"
   fi
