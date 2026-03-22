@@ -11,35 +11,22 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path("/home/takatodo/GEM_try")
-OUT_DIR = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-CUDA_OPT_DIR = ROOT / "verilator" / "opt" / "gpu" / "cuda"
-VERILATOR_BENCH_HELPERS = ROOT / "verilator" / "bin" / "verilator_sim_accel_bench.d"
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent.parent
+CUDA_OPT_DIR = ROOT_DIR / "src" / "sim_accel"
+VERILATOR_BENCH_HELPERS = ROOT_DIR / "third_party" / "verilator" / "bin" / "verilator_sim_accel_bench.d"
+DEFAULT_WORK_DIR = Path("/tmp/audit_llvm_backend_readiness")
 
 README = CUDA_OPT_DIR / "README.md"
 FULL_KERNEL_FUSER = CUDA_OPT_DIR / "full_kernel_fuser.py"
 PREPARE_BUNDLE = CUDA_OPT_DIR / "prepare_bench_bundle.py"
-RUN_SLICE_BASELINE = OUT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
-GPU_RUNTIME_POLICY = OUT_DIR / "gpu_runtime_batch_policy.py"
-CAPTURE_RUNTIME_LOG = OUT_DIR / "capture_runtime_log.py"
+RUN_SLICE_BASELINE = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
+GPU_RUNTIME_POLICY = SCRIPT_DIR / "gpu_runtime_batch_policy.py"
+CAPTURE_RUNTIME_LOG = SCRIPT_DIR / "capture_runtime_log.py"
 CACHE_HELPERS = VERILATOR_BENCH_HELPERS / "05_cache_materialize_helpers.sh"
 BUILD_HELPERS = VERILATOR_BENCH_HELPERS / "07_build_run_phase.sh"
 BUILD_BUNDLE = CUDA_OPT_DIR / "build_bench_bundle.py"
 MEASURE_BENCH_BACKENDS = CUDA_OPT_DIR / "measure_bench_backends.py"
-ROCM_LLVM_HSACO_SMOKE = OUT_DIR / "rocm_llvm_hsaco_smoke.json"
-ROCM_SIM_ACCEL_LAUNCH_ALL_SMOKE = OUT_DIR / "rocm_sim_accel_launch_all_smoke.json"
-ROCM_BUILD_BENCH_BUNDLE_SMOKE = OUT_DIR / "rocm_build_bench_bundle_smoke.json"
-ROCM_WRAPPER_SMOKE = OUT_DIR / "rocm_verilator_sim_accel_bench_smoke.json"
-ROCM_WRAPPER_SINGLE_CLUSTER_SMOKE = OUT_DIR / "rocm_verilator_sim_accel_bench_single_cluster_smoke.json"
-ROCM_NATIVE_HSACO_MAINLINE_PROBE = OUT_DIR / "rocm_native_hsaco_mainline_probe.json"
-ROCM_MAINLINE_RUNNER_SMOKE = OUT_DIR / "rocm_mainline_runner_smoke.json"
-ROCM_MAINLINE_RUNNER_SINGLE_CLUSTER_SMOKE = OUT_DIR / "rocm_mainline_runner_single_cluster_smoke.json"
-ROCM_MAINLINE_RUNNER_SINGLE_PARTITION_SMOKE = OUT_DIR / "rocm_mainline_runner_single_partition_smoke.json"
-ROCM_STRUCTURED_SECOND_WAVE_SEMANTIC_GAP_WAIVER = OUT_DIR / "rocm_structured_second_wave_semantic_gap_waiver.json"
-ROCM_MAINLINE_STRUCTURED_BUNDLE_PROBE = OUT_DIR / "rocm_mainline_structured_bundle_probe.json"
-ROCM_RTLMETER_RUNNER_SMOKE = OUT_DIR / "rocm_rtlmeter_runner_smoke.json"
-ROCM_RTLMETER_RUNNER_SINGLE_CLUSTER_SMOKE = OUT_DIR / "rocm_rtlmeter_runner_single_cluster_smoke.json"
-ROCM_NATIVE_GENERAL_BUNDLE_SMOKE = OUT_DIR / "rocm_native_general_bundle_smoke.json"
 
 
 def _read(path: Path) -> str:
@@ -87,39 +74,39 @@ def _wsl_rocm_bridge_state() -> dict[str, Any]:
     }
 
 
-def _detect_pipeline_status() -> dict[str, Any]:
-    readme = _read(README)
-    fuser = _read(FULL_KERNEL_FUSER)
-    prepare = _read(PREPARE_BUNDLE)
-    slice = _read(RUN_SLICE_BASELINE)
-    policy = _read(GPU_RUNTIME_POLICY)
-    runtime_log = _read(CAPTURE_RUNTIME_LOG)
-    cache_helpers = _read(CACHE_HELPERS)
-    build_bundle = _read(BUILD_BUNDLE)
-    measure_backends = _read(MEASURE_BENCH_BACKENDS)
-    build_helpers = _read(BUILD_HELPERS)
-    smoke_summary = _load_optional_json(ROCM_LLVM_HSACO_SMOKE)
-    sim_accel_smoke_summary = _load_optional_json(ROCM_SIM_ACCEL_LAUNCH_ALL_SMOKE)
-    build_bundle_smoke_summary = _load_optional_json(ROCM_BUILD_BENCH_BUNDLE_SMOKE)
-    wrapper_smoke_summary = _load_optional_json(ROCM_WRAPPER_SMOKE)
-    wrapper_single_cluster_smoke_summary = _load_optional_json(ROCM_WRAPPER_SINGLE_CLUSTER_SMOKE)
-    native_hsaco_mainline_probe_summary = _load_optional_json(ROCM_NATIVE_HSACO_MAINLINE_PROBE)
-    mainline_runner_smoke_summary = _load_optional_json(ROCM_MAINLINE_RUNNER_SMOKE)
+def _detect_pipeline_status(work_dir: Path) -> dict[str, Any]:
+    readme = _read(README) if README.is_file() else ""
+    fuser = _read(FULL_KERNEL_FUSER) if FULL_KERNEL_FUSER.is_file() else ""
+    prepare = _read(PREPARE_BUNDLE) if PREPARE_BUNDLE.is_file() else ""
+    slice = _read(RUN_SLICE_BASELINE) if RUN_SLICE_BASELINE.is_file() else ""
+    policy = _read(GPU_RUNTIME_POLICY) if GPU_RUNTIME_POLICY.is_file() else ""
+    runtime_log = _read(CAPTURE_RUNTIME_LOG) if CAPTURE_RUNTIME_LOG.is_file() else ""
+    cache_helpers = _read(CACHE_HELPERS) if CACHE_HELPERS.is_file() else ""
+    build_bundle = _read(BUILD_BUNDLE) if BUILD_BUNDLE.is_file() else ""
+    measure_backends = _read(MEASURE_BENCH_BACKENDS) if MEASURE_BENCH_BACKENDS.is_file() else ""
+    build_helpers = _read(BUILD_HELPERS) if BUILD_HELPERS.is_file() else ""
+    smoke_summary = _load_optional_json(work_dir / "rocm_llvm_hsaco_smoke.json")
+    sim_accel_smoke_summary = _load_optional_json(work_dir / "rocm_sim_accel_launch_all_smoke.json")
+    build_bundle_smoke_summary = _load_optional_json(work_dir / "rocm_build_bench_bundle_smoke.json")
+    wrapper_smoke_summary = _load_optional_json(work_dir / "rocm_verilator_sim_accel_bench_smoke.json")
+    wrapper_single_cluster_smoke_summary = _load_optional_json(work_dir / "rocm_verilator_sim_accel_bench_single_cluster_smoke.json")
+    native_hsaco_mainline_probe_summary = _load_optional_json(work_dir / "rocm_native_hsaco_mainline_probe.json")
+    mainline_runner_smoke_summary = _load_optional_json(work_dir / "rocm_mainline_runner_smoke.json")
     mainline_runner_single_cluster_smoke_summary = _load_optional_json(
-        ROCM_MAINLINE_RUNNER_SINGLE_CLUSTER_SMOKE
+        work_dir / "rocm_mainline_runner_single_cluster_smoke.json"
     )
     mainline_runner_single_partition_smoke_summary = _load_optional_json(
-        ROCM_MAINLINE_RUNNER_SINGLE_PARTITION_SMOKE
+        work_dir / "rocm_mainline_runner_single_partition_smoke.json"
     )
     structured_second_wave_waiver_summary = _load_optional_json(
-        ROCM_STRUCTURED_SECOND_WAVE_SEMANTIC_GAP_WAIVER
+        work_dir / "rocm_structured_second_wave_semantic_gap_waiver.json"
     )
     mainline_structured_bundle_probe_summary = _load_optional_json(
-        ROCM_MAINLINE_STRUCTURED_BUNDLE_PROBE
+        work_dir / "rocm_mainline_structured_bundle_probe.json"
     )
-    rtlmeter_runner_smoke_summary = _load_optional_json(ROCM_RTLMETER_RUNNER_SMOKE)
-    rtlmeter_runner_single_cluster_smoke_summary = _load_optional_json(ROCM_RTLMETER_RUNNER_SINGLE_CLUSTER_SMOKE)
-    native_general_bundle_smoke_summary = _load_optional_json(ROCM_NATIVE_GENERAL_BUNDLE_SMOKE)
+    rtlmeter_runner_smoke_summary = _load_optional_json(work_dir / "rocm_rtlmeter_runner_smoke.json")
+    rtlmeter_runner_single_cluster_smoke_summary = _load_optional_json(work_dir / "rocm_rtlmeter_runner_single_cluster_smoke.json")
+    native_general_bundle_smoke_summary = _load_optional_json(work_dir / "rocm_native_general_bundle_smoke.json")
 
     llvm_nvptx = bool(re.search(r'nvptx64-nvidia-cuda', fuser))
     llvm_amdgpu_lowering = bool(re.search(r'target triple = "amdgcn|--target=amdgcn|-march=amdgpu', fuser))
@@ -289,22 +276,22 @@ def _detect_pipeline_status() -> dict[str, Any]:
             "cache_helpers": str(CACHE_HELPERS),
             "build_helpers": str(BUILD_HELPERS),
             "measure_bench_backends": str(MEASURE_BENCH_BACKENDS),
-            "rocm_llvm_hsaco_smoke": str(ROCM_LLVM_HSACO_SMOKE),
-            "rocm_sim_accel_launch_all_smoke": str(ROCM_SIM_ACCEL_LAUNCH_ALL_SMOKE),
-            "rocm_build_bench_bundle_smoke": str(ROCM_BUILD_BENCH_BUNDLE_SMOKE),
-            "rocm_wrapper_smoke": str(ROCM_WRAPPER_SMOKE),
-            "rocm_wrapper_single_cluster_smoke": str(ROCM_WRAPPER_SINGLE_CLUSTER_SMOKE),
-            "rocm_native_hsaco_mainline_probe": str(ROCM_NATIVE_HSACO_MAINLINE_PROBE),
-            "rocm_mainline_runner_smoke": str(ROCM_MAINLINE_RUNNER_SMOKE),
-            "rocm_mainline_runner_single_cluster_smoke": str(ROCM_MAINLINE_RUNNER_SINGLE_CLUSTER_SMOKE),
-            "rocm_mainline_runner_single_partition_smoke": str(ROCM_MAINLINE_RUNNER_SINGLE_PARTITION_SMOKE),
+            "rocm_llvm_hsaco_smoke": str(work_dir / "rocm_llvm_hsaco_smoke.json"),
+            "rocm_sim_accel_launch_all_smoke": str(work_dir / "rocm_sim_accel_launch_all_smoke.json"),
+            "rocm_build_bench_bundle_smoke": str(work_dir / "rocm_build_bench_bundle_smoke.json"),
+            "rocm_wrapper_smoke": str(work_dir / "rocm_verilator_sim_accel_bench_smoke.json"),
+            "rocm_wrapper_single_cluster_smoke": str(work_dir / "rocm_verilator_sim_accel_bench_single_cluster_smoke.json"),
+            "rocm_native_hsaco_mainline_probe": str(work_dir / "rocm_native_hsaco_mainline_probe.json"),
+            "rocm_mainline_runner_smoke": str(work_dir / "rocm_mainline_runner_smoke.json"),
+            "rocm_mainline_runner_single_cluster_smoke": str(work_dir / "rocm_mainline_runner_single_cluster_smoke.json"),
+            "rocm_mainline_runner_single_partition_smoke": str(work_dir / "rocm_mainline_runner_single_partition_smoke.json"),
             "rocm_structured_second_wave_semantic_gap_waiver": str(
-                ROCM_STRUCTURED_SECOND_WAVE_SEMANTIC_GAP_WAIVER
+                work_dir / "rocm_structured_second_wave_semantic_gap_waiver.json"
             ),
-            "rocm_mainline_structured_bundle_probe": str(ROCM_MAINLINE_STRUCTURED_BUNDLE_PROBE),
-            "rocm_rtlmeter_runner_smoke": str(ROCM_RTLMETER_RUNNER_SMOKE),
-            "rocm_rtlmeter_runner_single_cluster_smoke": str(ROCM_RTLMETER_RUNNER_SINGLE_CLUSTER_SMOKE),
-            "rocm_native_general_bundle_smoke": str(ROCM_NATIVE_GENERAL_BUNDLE_SMOKE),
+            "rocm_mainline_structured_bundle_probe": str(work_dir / "rocm_mainline_structured_bundle_probe.json"),
+            "rocm_rtlmeter_runner_smoke": str(work_dir / "rocm_rtlmeter_runner_smoke.json"),
+            "rocm_rtlmeter_runner_single_cluster_smoke": str(work_dir / "rocm_rtlmeter_runner_single_cluster_smoke.json"),
+            "rocm_native_general_bundle_smoke": str(work_dir / "rocm_native_general_bundle_smoke.json"),
         },
     }
 
@@ -472,9 +459,10 @@ def _classify_overall(env_state: dict[str, Any], pipeline: dict[str, Any]) -> di
     }
 
 
-def _write_outputs(payload: dict[str, Any]) -> tuple[Path, Path]:
-    json_path = OUT_DIR / "llvm_backend_readiness.json"
-    md_path = OUT_DIR / "llvm_backend_readiness.md"
+def _write_outputs(payload: dict[str, Any], out_dir: Path) -> tuple[Path, Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_path = out_dir / "llvm_backend_readiness.json"
+    md_path = out_dir / "llvm_backend_readiness.md"
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     summary = payload["summary"]
@@ -541,23 +529,32 @@ def _write_outputs(payload: dict[str, Any]) -> tuple[Path, Path]:
         f"- [05_cache_materialize_helpers.sh]({CACHE_HELPERS})",
         f"- [07_build_run_phase.sh]({BUILD_HELPERS})",
         f"- [measure_bench_backends.py]({MEASURE_BENCH_BACKENDS})",
-        f"- [rocm_llvm_hsaco_smoke.json]({ROCM_LLVM_HSACO_SMOKE})",
-        f"- [rocm_sim_accel_launch_all_smoke.json]({ROCM_SIM_ACCEL_LAUNCH_ALL_SMOKE})",
-        f"- [rocm_build_bench_bundle_smoke.json]({ROCM_BUILD_BENCH_BUNDLE_SMOKE})",
-        f"- [rocm_verilator_sim_accel_bench_smoke.json]({ROCM_WRAPPER_SMOKE})",
-        f"- [rocm_verilator_sim_accel_bench_single_cluster_smoke.json]({ROCM_WRAPPER_SINGLE_CLUSTER_SMOKE})",
-        f"- [rocm_native_hsaco_mainline_probe.json]({ROCM_NATIVE_HSACO_MAINLINE_PROBE})",
-        f"- [rocm_mainline_runner_smoke.json]({ROCM_MAINLINE_RUNNER_SMOKE})",
-        f"- [rocm_mainline_structured_bundle_probe.json]({ROCM_MAINLINE_STRUCTURED_BUNDLE_PROBE})",
-        f"- [rocm_rtlmeter_runner_smoke.json]({ROCM_RTLMETER_RUNNER_SMOKE})",
-        f"- [rocm_rtlmeter_runner_single_cluster_smoke.json]({ROCM_RTLMETER_RUNNER_SINGLE_CLUSTER_SMOKE})",
-        f"- [rocm_native_general_bundle_smoke.json]({ROCM_NATIVE_GENERAL_BUNDLE_SMOKE})",
+        f"- [rocm_llvm_hsaco_smoke.json]({out_dir / 'rocm_llvm_hsaco_smoke.json'})",
+        f"- [rocm_sim_accel_launch_all_smoke.json]({out_dir / 'rocm_sim_accel_launch_all_smoke.json'})",
+        f"- [rocm_build_bench_bundle_smoke.json]({out_dir / 'rocm_build_bench_bundle_smoke.json'})",
+        f"- [rocm_verilator_sim_accel_bench_smoke.json]({out_dir / 'rocm_verilator_sim_accel_bench_smoke.json'})",
+        f"- [rocm_verilator_sim_accel_bench_single_cluster_smoke.json]({out_dir / 'rocm_verilator_sim_accel_bench_single_cluster_smoke.json'})",
+        f"- [rocm_native_hsaco_mainline_probe.json]({out_dir / 'rocm_native_hsaco_mainline_probe.json'})",
+        f"- [rocm_mainline_runner_smoke.json]({out_dir / 'rocm_mainline_runner_smoke.json'})",
+        f"- [rocm_mainline_structured_bundle_probe.json]({out_dir / 'rocm_mainline_structured_bundle_probe.json'})",
+        f"- [rocm_rtlmeter_runner_smoke.json]({out_dir / 'rocm_rtlmeter_runner_smoke.json'})",
+        f"- [rocm_rtlmeter_runner_single_cluster_smoke.json]({out_dir / 'rocm_rtlmeter_runner_single_cluster_smoke.json'})",
+        f"- [rocm_native_general_bundle_smoke.json]({out_dir / 'rocm_native_general_bundle_smoke.json'})",
     ]
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return json_path, md_path
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="Audit LLVM backend readiness for ROCm portability.")
+    parser.add_argument(
+        "--work-dir",
+        default=str(DEFAULT_WORK_DIR),
+        help="Directory for smoke-test result JSONs and output reports (default: %(default)s)",
+    )
+    ns = parser.parse_args()
+    work_dir = Path(ns.work_dir).expanduser().resolve()
     payload = {
         "schema_version": "llvm-backend-readiness-v1",
         "platform": platform.platform(),
@@ -572,9 +569,9 @@ def main() -> int:
             "clinfo": _run(["clinfo"]),
         },
     }
-    payload["pipeline"] = _detect_pipeline_status()
+    payload["pipeline"] = _detect_pipeline_status(work_dir)
     payload["summary"] = _classify_overall(payload["environment"], payload["pipeline"])
-    json_path, md_path = _write_outputs(payload)
+    json_path, md_path = _write_outputs(payload, work_dir)
     print(json_path)
     print(md_path)
     return 0

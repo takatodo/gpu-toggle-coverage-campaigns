@@ -367,5 +367,5 @@
     }
   ],
   "schema_version": "toggle-coverage-rule-assignments-v1",
-  "source_rules_json": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/toggle_coverage_generic_rules.json"
+  "source_rules_json": "config/rules/toggle_coverage_generic_rules.json"
 }

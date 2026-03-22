@@ -3,7 +3,7 @@
     "candidate_count": 515,
     "shard_count": 2
   },
-  "convergence_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_convergence_freeze.json",
+  "convergence_profile_source": null,
   "convergence_profiles": {
     "campaign": {
       "best_case_dead_region_count": 0,
@@ -59,7 +59,7 @@
     "debug_checker_seen_o",
     "debug_terminal_seen_o"
   ],
-  "execution_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "execution_profile_source": null,
   "execution_profiles": {
     "campaign": {
       "compact_match": true,
@@ -166,18 +166,18 @@
   "pilot_gate": "Validate low-ROM streaming to KMAC, top-digest capture progress, KMAC versus ROM race resolution, checker completion, and terminal done-bus-select versus alert behavior before any breadth-first GRPO comparison.",
   "priority": 18,
   "runner": {
-    "baseline_reference_runner": "/home/takatodo/GEM_try/scripts/run_opentitan_tlul_fifo_sync_trace_gpu_sweep.py",
-    "planned_generic_runner": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/run_opentitan_tlul_slice_trace_gpu_sweep.py",
+    "baseline_reference_runner": null,
+    "planned_generic_runner": null,
     "runner_generalization_required": false
   },
   "runner_args_template": {
-    "batch_defaults_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_defaults_path": "third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
     "batch_length": 64,
     "campaign_gpu_nstates": 512,
     "campaign_sequential_rep_graph_mode": "auto",
     "cases": 12000,
-    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/rom_ctrl_fsm_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/rom_ctrl_fsm_gpu_cov_tb.sv",
+    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/rom_ctrl_fsm_coverage_regions.json",
+    "coverage_tb_path": "work/source_stage/OpenTitan/src/rom_ctrl_fsm_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
     "debug_internal_output_names": [
@@ -273,7 +273,7 @@
     "pilot_campaign_candidate_count": 4096,
     "pilot_sweep_cases": 256,
     "profile_family": "mixed",
-    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/rom_ctrl_fsm.sv",
+    "rtl_path": "third_party/rtlmeter/designs/OpenTitan/src/rom_ctrl_fsm.sv",
     "seed_fanout": 1,
     "shard_count": 128,
     "states_per_case": 4,
@@ -282,15 +282,15 @@
     "trace_length": 20,
     "uniform_states": true,
     "variants_per_case": 5,
-    "work_dir": "/home/takatodo/gpu-toggle-coverage-campaigns/work/slice_pilots/rom_ctrl_fsm"
+    "work_dir": "work/slice_pilots/rom_ctrl_fsm"
   },
-  "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "runtime_rule_source": null,
   "schema_version": "opentitan-tlul-slice-launch-template-v1",
   "slice_name": "rom_ctrl_fsm",
   "static_features": {
     "base_outputs_ready": true,
-    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/rom_ctrl_fsm_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/rom_ctrl_fsm_gpu_cov_tb.sv",
+    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/rom_ctrl_fsm_coverage_regions.json",
+    "coverage_tb_path": "work/source_stage/OpenTitan/src/rom_ctrl_fsm_gpu_cov_tb.sv",
     "exclusive_word_count": 18,
     "exclusive_word_fraction": 1.0,
     "focused_wave_ready": true,
@@ -316,7 +316,7 @@
     ],
     "rtl_input_port_count": 9,
     "rtl_output_port_count": 13,
-    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/rom_ctrl_fsm.sv",
+    "rtl_path": "third_party/rtlmeter/designs/OpenTitan/src/rom_ctrl_fsm.sv",
     "rtl_reset_ports": [
       "rst_ni"
     ],
@@ -349,7 +349,7 @@
     "words_per_region_max": 6,
     "words_per_region_min": 3
   },
-  "static_features_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_static_features.json",
+  "static_features_source": null,
   "status": "onboarding_in_progress",
   "target": "OpenTitan.rom_ctrl_fsm",
   "tb_core_contract": {

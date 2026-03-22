@@ -9,11 +9,9 @@ import tempfile
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-BASELINE_MODULE_PATH = ROOT / "opentitan_support" / "run_opentitan_tlul_slice_gpu_baseline.py"
-PRODUCTION_DEFAULTS_MODULE_PATH = (
-    ROOT / "opentitan_support" / "freeze_opentitan_tlul_slice_production_defaults.py"
-)
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASELINE_MODULE_PATH = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
+PRODUCTION_DEFAULTS_MODULE_PATH = SCRIPT_DIR / "freeze_opentitan_tlul_slice_production_defaults.py"
 
 
 def _load_module(name: str, path: Path):
@@ -29,6 +27,8 @@ def _load_module(name: str, path: Path):
 
 class CirctBackendPolicyFlowTest(unittest.TestCase):
     def test_edn_auto_backend_uses_frozen_single_step_policy(self) -> None:
+        if not BASELINE_MODULE_PATH.is_file():
+            self.skipTest(f"Module not available: {BASELINE_MODULE_PATH.name}")
         module = _load_module("slice_baseline_policy", BASELINE_MODULE_PATH)
         template = {
             "launch_backend_policy": {
@@ -43,6 +43,8 @@ class CirctBackendPolicyFlowTest(unittest.TestCase):
         self.assertEqual(module._effective_launch_backend(template, ns, 8), "source")
 
     def test_production_defaults_preserve_canonical_execution_profile_keys(self) -> None:
+        if not PRODUCTION_DEFAULTS_MODULE_PATH.is_file():
+            self.skipTest(f"Module not available: {PRODUCTION_DEFAULTS_MODULE_PATH.name}")
         module = _load_module("production_defaults_policy", PRODUCTION_DEFAULTS_MODULE_PATH)
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

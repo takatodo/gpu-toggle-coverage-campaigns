@@ -7,8 +7,8 @@ import sys
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-GRPO_COMMON_PATH = ROOT / "grpo" / "grpo_coverage_common.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+GRPO_COMMON_PATH = SCRIPT_DIR / "grpo_coverage_common.py"
 
 
 def _load_module(name: str, path: Path):

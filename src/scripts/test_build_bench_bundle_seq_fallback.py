@@ -6,8 +6,8 @@ from pathlib import Path
 import sys
 import unittest
 
-ROOT_DIR = Path("/home/takatodo/GEM_try")
-CUDA_OPT_DIR = ROOT_DIR / "verilator" / "opt" / "gpu" / "cuda"
+ROOT_DIR = Path(__file__).resolve().parents[2]
+CUDA_OPT_DIR = ROOT_DIR / "src" / "sim_accel"
 if str(CUDA_OPT_DIR) not in sys.path:
     sys.path.insert(0, str(CUDA_OPT_DIR))
 

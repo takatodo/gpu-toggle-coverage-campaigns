@@ -8,9 +8,9 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-ROLLOUT_STATUS_PATH = ROOT / "archive" / "report_opentitan_tlul_slice_rollout_status.py"
-SURFACE_RESULTS_PATH = ROOT / "opentitan_support" / "report_opentitan_tlul_surface_results.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+ROLLOUT_STATUS_PATH = SCRIPT_DIR / "report_opentitan_tlul_slice_rollout_status.py"
+SURFACE_RESULTS_PATH = SCRIPT_DIR / "report_opentitan_tlul_surface_results.py"
 
 
 def _load_module(path: Path, name: str):
@@ -23,6 +23,8 @@ def _load_module(path: Path, name: str):
 
 class RolloutCampaignTargetRegionSummaryTest(unittest.TestCase):
     def test_load_pilot_campaign_quality_counts_target_region_coverage(self) -> None:
+        if not ROLLOUT_STATUS_PATH.is_file():
+            self.skipTest(f"Module not available: {ROLLOUT_STATUS_PATH.name}")
         module = _load_module(ROLLOUT_STATUS_PATH, "rollout_status_campaign_quality")
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -65,6 +67,8 @@ class RolloutCampaignTargetRegionSummaryTest(unittest.TestCase):
         self.assertEqual(quality["status"], "positive_or_partial")
 
     def test_pilot_rollout_metrics_prefers_campaign_summary_and_preserves_target_counts(self) -> None:
+        if not SURFACE_RESULTS_PATH.is_file():
+            self.skipTest(f"Module not available: {SURFACE_RESULTS_PATH.name}")
         module = _load_module(SURFACE_RESULTS_PATH, "surface_results_campaign_quality")
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

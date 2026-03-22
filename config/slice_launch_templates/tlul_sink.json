@@ -1,6 +1,6 @@
 {
   "campaign_tuning": {},
-  "convergence_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_convergence_freeze.json",
+  "convergence_profile_source": null,
   "convergence_profiles": {
     "campaign": {
       "best_case_dead_region_count": null,
@@ -16,7 +16,7 @@
       "stop_reasons": []
     }
   },
-  "execution_profile_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "execution_profile_source": null,
   "execution_profiles": {
     "campaign": {
       "compact_match": true,
@@ -84,18 +84,18 @@
   "pilot_gate": "Create a first GPU-toggle cov_tb and manifest, then validate live request accept, pending response return, embedded tlul_err classification, and final d_error propagation.",
   "priority": 9,
   "runner": {
-    "baseline_reference_runner": "/home/takatodo/GEM_try/scripts/run_opentitan_tlul_fifo_sync_trace_gpu_sweep.py",
-    "planned_generic_runner": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/run_opentitan_tlul_slice_trace_gpu_sweep.py",
+    "baseline_reference_runner": null,
+    "planned_generic_runner": null,
     "runner_generalization_required": false
   },
   "runner_args_template": {
-    "batch_defaults_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_defaults_path": "third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
     "batch_length": 12,
     "campaign_gpu_nstates": 512,
     "campaign_sequential_rep_graph_mode": "auto",
     "cases": 25000,
-    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/tlul_sink_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/tlul_sink_gpu_cov_tb.sv",
+    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/tlul_sink_coverage_regions.json",
+    "coverage_tb_path": "work/source_stage/OpenTitan/src/tlul_sink_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
     "debug_internal_output_names": [],
@@ -108,7 +108,7 @@
     "pilot_campaign_candidate_count": 4096,
     "pilot_sweep_cases": 256,
     "profile_family": "mixed",
-    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/tlul_sink.sv",
+    "rtl_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_sink.sv",
     "seed_fanout": 1,
     "shard_count": 256,
     "states_per_case": 4,
@@ -117,15 +117,15 @@
     "trace_length": 12,
     "uniform_states": true,
     "variants_per_case": 4,
-    "work_dir": "/home/takatodo/gpu-toggle-coverage-campaigns/work/slice_pilots/tlul_sink"
+    "work_dir": "work/slice_pilots/tlul_sink"
   },
-  "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
+  "runtime_rule_source": null,
   "schema_version": "opentitan-tlul-slice-launch-template-v1",
   "slice_name": "tlul_sink",
   "static_features": {
     "base_outputs_ready": true,
-    "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/tlul_sink_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/src/tlul_sink_gpu_cov_tb.sv",
+    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/tlul_sink_coverage_regions.json",
+    "coverage_tb_path": "work/source_stage/OpenTitan/src/tlul_sink_gpu_cov_tb.sv",
     "exclusive_word_count": 18,
     "exclusive_word_fraction": 1.0,
     "focused_wave_ready": true,
@@ -151,7 +151,7 @@
     ],
     "rtl_input_port_count": 3,
     "rtl_output_port_count": 1,
-    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/tlul_sink.sv",
+    "rtl_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_sink.sv",
     "rtl_reset_ports": [
       "rst_ni"
     ],
@@ -184,7 +184,7 @@
     "words_per_region_max": 4,
     "words_per_region_min": 3
   },
-  "static_features_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_static_features.json",
+  "static_features_source": null,
   "status": "ready_for_campaign",
   "target": "OpenTitan.tlul_sink",
   "tb_core_contract": {

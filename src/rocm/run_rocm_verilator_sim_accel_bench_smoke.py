@@ -13,10 +13,10 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = Path("/home/takatodo/GEM_try")
-VERILATOR_SIM_ACCEL_BENCH = ROOT / "verilator" / "bin" / "verilator_sim_accel_bench"
-VERILATOR_BIN = ROOT / "verilator" / "bin" / "verilator"
-RTL_SOURCE = ROOT / "verilator" / "test_regress" / "t" / "t_sim_accel_bench_exec.v"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+VERILATOR_SIM_ACCEL_BENCH = ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench"
+VERILATOR_BIN = ROOT_DIR / "third_party/verilator/bin/verilator"
+RTL_SOURCE = ROOT_DIR / "third_party/verilator/test_regress" / "t" / "t_sim_accel_bench_exec.v"
 DEFAULT_OUT_DIR = Path("/tmp/rocm_verilator_sim_accel_bench_smoke_v2")
 DEFAULT_JSON = SCRIPT_DIR / "rocm_verilator_sim_accel_bench_smoke.json"
 DEFAULT_MD = SCRIPT_DIR / "rocm_verilator_sim_accel_bench_smoke.md"

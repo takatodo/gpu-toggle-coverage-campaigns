@@ -13,12 +13,10 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = Path("/home/takatodo/GEM_try")
-BUILD_BUNDLE = ROOT / "verilator" / "opt" / "gpu" / "cuda" / "build_bench_bundle.py"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+BUILD_BUNDLE = ROOT_DIR / "src/sim_accel/build_bench_bundle.py"
 DEFAULT_SOURCE_BUNDLE = (
-    ROOT
-    / "verilator"
-    / "test_regress"
+    ROOT_DIR / "third_party/verilator/test_regress"
     / "obj_vlt"
     / "t_sim_accel_bench_exec"
     / "sim_accel_bench_hit"

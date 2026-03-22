@@ -10,8 +10,8 @@ import types
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-RUNNER_PATH = ROOT / "grpo" / "run_gpro_coverage_improvement.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+RUNNER_PATH = SCRIPT_DIR.parent / "grpo/run_gpro_coverage_improvement.py"
 
 
 def _load_module(name: str, path: Path):
@@ -27,6 +27,8 @@ def _load_module(name: str, path: Path):
 
 class WrapperSummaryTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not RUNNER_PATH.is_file():
+            self.skipTest(f"Module not available: {RUNNER_PATH.name}")
         self.runner = _load_module("grpo_run_wrapper_summary_test", RUNNER_PATH)
 
     def test_resolve_wrapper_json_out_avoids_overwriting_runner_summary(self) -> None:

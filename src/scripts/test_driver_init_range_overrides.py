@@ -8,8 +8,8 @@ import tempfile
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-BASELINE_MODULE_PATH = ROOT / "opentitan_support" / "run_opentitan_tlul_slice_gpu_baseline.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+BASELINE_MODULE_PATH = SCRIPT_DIR / "run_opentitan_tlul_slice_gpu_baseline.py"
 
 
 def _load_module(name: str, path: Path):

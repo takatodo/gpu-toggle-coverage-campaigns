@@ -15,8 +15,8 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = Path("/home/takatodo/GEM_try")
-PROGRAM_JSON_TO_FULL_ALL = ROOT / "verilator" / "opt" / "gpu" / "cuda" / "program_json_to_full_all.py"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+PROGRAM_JSON_TO_FULL_ALL = ROOT_DIR / "src/sim_accel/program_json_to_full_all.py"
 DEFAULT_OUT_DIR = Path("/tmp/rocm_native_hsaco_mainline_probe_v1")
 DEFAULT_SUMMARY_JSON = SCRIPT_DIR / "rocm_native_hsaco_mainline_probe.json"
 DEFAULT_SUMMARY_MD = SCRIPT_DIR / "rocm_native_hsaco_mainline_probe.md"

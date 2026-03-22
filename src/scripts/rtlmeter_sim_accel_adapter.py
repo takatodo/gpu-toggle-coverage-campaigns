@@ -14,8 +14,10 @@ import sys
 from typing import Any, Iterable
 
 
-DEFAULT_VERILATOR = "/home/takatodo/GEM_try/verilator/bin/verilator"
-DEFAULT_BENCH = "/home/takatodo/GEM_try/verilator/bin/verilator_sim_accel_bench"
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_ROOT_DIR = _SCRIPT_DIR.parent.parent
+DEFAULT_VERILATOR = str(_ROOT_DIR / "third_party/verilator/bin/verilator")
+DEFAULT_BENCH = str(_ROOT_DIR / "third_party/verilator/bin/verilator_sim_accel_bench")
 
 SKIP_FLAGS = {
     "--cc",

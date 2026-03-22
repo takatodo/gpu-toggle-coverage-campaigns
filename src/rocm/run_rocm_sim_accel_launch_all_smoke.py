@@ -13,11 +13,9 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT = Path("/home/takatodo/GEM_try")
+ROOT_DIR = SCRIPT_DIR.parent.parent
 DEFAULT_BENCH_DIR = (
-    ROOT
-    / "verilator"
-    / "test_regress"
+    ROOT_DIR / "third_party/verilator/test_regress"
     / "obj_vlt"
     / "t_sim_accel_bench_exec"
     / "sim_accel_bench"

@@ -9,8 +9,8 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-ROOT_DIR = Path("/home/takatodo/GEM_try")
-REPO_SCRIPTS = ROOT_DIR / "scripts"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+REPO_SCRIPTS = ROOT_DIR / "src/scripts"
 
 if str(REPO_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(REPO_SCRIPTS))

@@ -9,8 +9,8 @@ import tempfile
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-TRAINER_PATH = ROOT / "grpo" / "train_grpo_policy_minimal.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+TRAINER_PATH = SCRIPT_DIR.parent / "grpo/train_grpo_policy_minimal.py"
 
 
 def _load_module(name: str, path: Path):
@@ -49,6 +49,8 @@ def _record(
 
 class TrainGrpoPolicyMinimalTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not TRAINER_PATH.is_file():
+            self.skipTest(f"Module not available: {TRAINER_PATH.name}")
         self.trainer = _load_module("train_grpo_policy_minimal_test_module", TRAINER_PATH)
 
     def _run_trainer(

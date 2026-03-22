@@ -9,10 +9,7 @@ import tempfile
 import unittest
 
 
-MODULE_PATH = Path(
-    "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/"
-    "opentitan_support/run_opentitan_tlul_slice_backend_compare.py"
-)
+MODULE_PATH = Path(__file__).resolve().parent / "run_opentitan_tlul_slice_backend_compare.py"
 
 
 def _load_module():
@@ -28,6 +25,8 @@ def _load_module():
 
 class BackendCompareGenerateCmdTest(unittest.TestCase):
     def test_generate_cmd_emits_raw_cuda_sidecars(self) -> None:
+        if not MODULE_PATH.is_file():
+            self.skipTest(f"Module not available: {MODULE_PATH.name}")
         module = _load_module()
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

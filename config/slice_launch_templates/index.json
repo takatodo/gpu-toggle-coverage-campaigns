@@ -3,126 +3,126 @@
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_fifo_sync.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_fifo_sync.json",
       "slice_name": "tlul_fifo_sync",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_socket_1n.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_socket_1n.json",
       "slice_name": "tlul_socket_1n",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_socket_m1.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_socket_m1.json",
       "slice_name": "tlul_socket_m1",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/xbar_main.json",
+      "launch_template_path": "config/slice_launch_templates/xbar_main.json",
       "slice_name": "xbar_main",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/xbar_peri.json",
+      "launch_template_path": "config/slice_launch_templates/xbar_peri.json",
       "slice_name": "xbar_peri",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_fifo_async.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_fifo_async.json",
       "slice_name": "tlul_fifo_async",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_request_loopback.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_request_loopback.json",
       "slice_name": "tlul_request_loopback",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_err.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_err.json",
       "slice_name": "tlul_err",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": true,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/tlul_sink.json",
+      "launch_template_path": "config/slice_launch_templates/tlul_sink.json",
       "slice_name": "tlul_sink",
       "status": "ready_for_campaign"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/edn_main_sm.json",
+      "launch_template_path": "config/slice_launch_templates/edn_main_sm.json",
       "slice_name": "edn_main_sm",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/csrng_main_sm.json",
+      "launch_template_path": "config/slice_launch_templates/csrng_main_sm.json",
       "slice_name": "csrng_main_sm",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/aes_cipher_control.json",
+      "launch_template_path": "config/slice_launch_templates/aes_cipher_control.json",
       "slice_name": "aes_cipher_control",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/entropy_src_main_sm.json",
+      "launch_template_path": "config/slice_launch_templates/entropy_src_main_sm.json",
       "slice_name": "entropy_src_main_sm",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/alert_handler_esc_timer.json",
+      "launch_template_path": "config/slice_launch_templates/alert_handler_esc_timer.json",
       "slice_name": "alert_handler_esc_timer",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/lc_ctrl_fsm.json",
+      "launch_template_path": "config/slice_launch_templates/lc_ctrl_fsm.json",
       "slice_name": "lc_ctrl_fsm",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/rom_ctrl_fsm.json",
+      "launch_template_path": "config/slice_launch_templates/rom_ctrl_fsm.json",
       "slice_name": "rom_ctrl_fsm",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/alert_handler_ping_timer.json",
+      "launch_template_path": "config/slice_launch_templates/alert_handler_ping_timer.json",
       "slice_name": "alert_handler_ping_timer",
       "status": "onboarding_in_progress"
     },
     {
       "can_prepare_launch": true,
       "can_run_pilot": false,
-      "launch_template_path": "/home/takatodo/gpu-toggle-coverage-campaigns/config/slice_launch_templates/pwrmgr_fsm.json",
+      "launch_template_path": "config/slice_launch_templates/pwrmgr_fsm.json",
       "slice_name": "pwrmgr_fsm",
       "status": "onboarding_in_progress"
     }

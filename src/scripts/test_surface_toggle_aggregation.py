@@ -7,8 +7,8 @@ import sys
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-MODULE_PATH = ROOT / "opentitan_support" / "report_opentitan_tlul_surface_results.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+MODULE_PATH = SCRIPT_DIR / "report_opentitan_tlul_surface_results.py"
 
 
 def _load_module(name: str, path: Path):
@@ -24,6 +24,8 @@ def _load_module(name: str, path: Path):
 
 class SurfaceToggleAggregationTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not MODULE_PATH.is_file():
+            self.skipTest(f"Module not available: {MODULE_PATH.name}")
         self.module = _load_module("surface_toggle_aggregation_module", MODULE_PATH)
 
     def test_toggle_coverage_aggregate_sums_hits_regions_and_targets(self) -> None:

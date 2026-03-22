@@ -13,9 +13,9 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 GENERATE_DIRS = SCRIPT_DIR / "generate_opentitan_tlul_slice_generated_dirs.py"
-ROOT = Path("/home/takatodo/GEM_try")
-PREPARE_BUNDLE = ROOT / "verilator" / "opt" / "gpu" / "cuda" / "prepare_bench_bundle.py"
-BUILD_BUNDLE = ROOT / "verilator" / "opt" / "gpu" / "cuda" / "build_bench_bundle.py"
+ROOT_DIR = SCRIPT_DIR.parent.parent
+PREPARE_BUNDLE = ROOT_DIR / "src/sim_accel/prepare_bench_bundle.py"
+BUILD_BUNDLE = ROOT_DIR / "src/sim_accel/build_bench_bundle.py"
 SLICE_NAME = "tlul_fifo_sync"
 DEFAULT_OUT_DIR = Path("/tmp/rocm_native_general_bundle_smoke_v5")
 DEFAULT_JSON = SCRIPT_DIR / "rocm_native_general_bundle_smoke.json"

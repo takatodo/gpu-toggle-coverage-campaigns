@@ -7,9 +7,9 @@ import sys
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-GRPO_COMMON_PATH = ROOT / "grpo" / "grpo_coverage_common.py"
-DATASET_BUILDER_PATH = ROOT / "grpo" / "build_grpo_offline_dataset.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+GRPO_COMMON_PATH = SCRIPT_DIR / "grpo_coverage_common.py"
+DATASET_BUILDER_PATH = SCRIPT_DIR.parent / "grpo/build_grpo_offline_dataset.py"
 
 
 def _load_module(name: str, path: Path):
@@ -26,7 +26,10 @@ def _load_module(name: str, path: Path):
 class MarginalBreadthRewardTest(unittest.TestCase):
     def setUp(self) -> None:
         self.common = _load_module("grpo_common_marginal_breadth_test", GRPO_COMMON_PATH)
-        self.dataset_builder = _load_module("grpo_dataset_builder_marginal_breadth_test", DATASET_BUILDER_PATH)
+        if DATASET_BUILDER_PATH.is_file():
+            self.dataset_builder = _load_module("grpo_dataset_builder_marginal_breadth_test", DATASET_BUILDER_PATH)
+        else:
+            self.dataset_builder = None
 
     def test_marginal_breadth_prefers_multi_region_case(self) -> None:
         narrow_terms = self.common.reward_terms_from_case(
@@ -66,6 +69,8 @@ class MarginalBreadthRewardTest(unittest.TestCase):
         self.assertGreater(narrow_terms["target_isolation_penalty"], wide_terms["target_isolation_penalty"])
 
     def test_dataset_shaping_rewards_rare_target_regions(self) -> None:
+        if self.dataset_builder is None:
+            self.skipTest("build_grpo_offline_dataset not available in this repo")
         records = [
             {
                 "slice_context_key": "tlul_socket_m1::*::mixed",

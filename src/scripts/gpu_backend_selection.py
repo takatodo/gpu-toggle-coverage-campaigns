@@ -7,12 +7,8 @@ from typing import Any
 from gpu_runtime_batch_policy import classify_gpu_runtime_tier
 
 
-PLAN_MD = Path(
-    "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/llvm_backend_portability_plan.md"
-)
-READINESS_MD = Path(
-    "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/llvm_backend_readiness.md"
-)
+PLAN_MD = Path("/tmp/audit_llvm_backend_readiness/llvm_backend_portability_plan.md")
+READINESS_MD = Path("/tmp/audit_llvm_backend_readiness/llvm_backend_readiness.md")
 
 
 def resolve_gpu_execution_backend(

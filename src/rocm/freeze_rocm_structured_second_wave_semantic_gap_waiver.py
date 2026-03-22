@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Any
 
 
-OUT_DIR = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-CLUSTER = OUT_DIR / "rocm_mainline_runner_single_cluster_smoke.json"
-PARTITION = OUT_DIR / "rocm_mainline_runner_single_partition_smoke.json"
-JSON_OUT = OUT_DIR / "rocm_structured_second_wave_semantic_gap_waiver.json"
-MD_OUT = OUT_DIR / "rocm_structured_second_wave_semantic_gap_waiver.md"
+DEFAULT_WORK_DIR = Path("/tmp/freeze_rocm_structured_second_wave_semantic_gap_waiver")
+CLUSTER = DEFAULT_WORK_DIR / "rocm_mainline_runner_single_cluster_smoke.json"
+PARTITION = DEFAULT_WORK_DIR / "rocm_mainline_runner_single_partition_smoke.json"
+JSON_OUT = DEFAULT_WORK_DIR / "rocm_structured_second_wave_semantic_gap_waiver.json"
+MD_OUT = DEFAULT_WORK_DIR / "rocm_structured_second_wave_semantic_gap_waiver.md"
 
 
 def _load_json(path: Path) -> dict[str, Any]:

@@ -6,9 +6,9 @@ from pathlib import Path
 import sys
 import unittest
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+_RUNNERS_DIR = Path(__file__).resolve().parents[1] / "runners"
+if str(_RUNNERS_DIR) not in sys.path:
+    sys.path.insert(0, str(_RUNNERS_DIR))
 
 from opentitan_support.generate_opentitan_tlul_slice_generated_dirs import (
     _overlay_structured_raw_sidecars,

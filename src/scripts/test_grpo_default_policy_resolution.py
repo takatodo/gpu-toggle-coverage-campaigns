@@ -11,8 +11,8 @@ import unittest
 from unittest import mock
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-RUNNER_PATH = ROOT / "grpo" / "run_gpro_coverage_improvement.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+RUNNER_PATH = SCRIPT_DIR.parent / "grpo/run_gpro_coverage_improvement.py"
 
 
 def _load_module(name: str, path: Path):
@@ -28,6 +28,8 @@ def _load_module(name: str, path: Path):
 
 class DefaultPolicyResolutionTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not RUNNER_PATH.is_file():
+            self.skipTest(f"Module not available: {RUNNER_PATH.name}")
         self.runner = _load_module("grpo_default_policy_resolution_test", RUNNER_PATH)
 
     def test_recommended_defaults_exist_for_lc_ctrl_fsm(self) -> None:

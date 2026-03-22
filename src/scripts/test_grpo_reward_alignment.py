@@ -9,8 +9,8 @@ import tempfile
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-REPORT_PATH = ROOT / "grpo" / "report_grpo_reward_alignment.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPORT_PATH = SCRIPT_DIR.parent / "grpo/report_grpo_reward_alignment.py"
 
 
 def _load_module(name: str, path: Path):
@@ -38,6 +38,8 @@ def _row(reward: float, *, hit: float, active: float, target: float, dead: float
 
 class RewardAlignmentReportTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not REPORT_PATH.is_file():
+            self.skipTest(f"Module not available: {REPORT_PATH.name}")
         self.report = _load_module("grpo_reward_alignment_test_module", REPORT_PATH)
 
     def _write_dataset(self, rows: list[dict[str, object]]) -> Path:

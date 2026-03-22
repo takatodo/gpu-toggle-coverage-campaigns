@@ -7,9 +7,9 @@ import sys
 import unittest
 
 
-ROOT = Path("/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k")
-AXES_MODULE_PATH = ROOT / "grpo" / "report_grpo_ab_evaluation_axes.py"
-COMMON_MODULE_PATH = ROOT / "grpo" / "grpo_coverage_common.py"
+SCRIPT_DIR = Path(__file__).resolve().parent
+AXES_MODULE_PATH = SCRIPT_DIR.parent / "grpo/report_grpo_ab_evaluation_axes.py"
+COMMON_MODULE_PATH = SCRIPT_DIR / "grpo_coverage_common.py"
 
 
 def _load_module(name: str, path: Path):
@@ -25,6 +25,8 @@ def _load_module(name: str, path: Path):
 
 class GrpoAbEvaluationAxesTest(unittest.TestCase):
     def setUp(self) -> None:
+        if not AXES_MODULE_PATH.is_file():
+            self.skipTest(f"Module not available: {AXES_MODULE_PATH.name}")
         self.axes = _load_module("grpo_ab_axes_test_module", AXES_MODULE_PATH)
         self.common = _load_module("grpo_common_test_module", COMMON_MODULE_PATH)
 
