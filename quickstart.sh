@@ -108,41 +108,34 @@ elif [ "$GPU_OK" -eq 0 ]; then
   echo
   echo -e "${GREEN}Environment ready.${RESET} Re-run without --skip-run once GPU/bench is set up."
 else
-  WORK_DIR="work/quickstart"
-  JSON_OUT="$WORK_DIR/smoke_result.json"
+  WORK_DIR="work/quickstart/VeeR-EL2/gpu_cov_gate"
+  JSON_OUT="$WORK_DIR/baseline.json"
   mkdir -p "$WORK_DIR"
   echo "  output → $WORK_DIR"
+  # Skip pre-GPU gate (CPU RTL sim) — it runs ~3 min every time and is not
+  # needed for a quickstart smoke test where we just want GPU execution.
   echo
-  python3 src/runners/run_veer_family_gpu_toggle_validation.py \
-    --design VeeR-EL2 \
-    --work-dir "$WORK_DIR" \
-    --json-out "$JSON_OUT" \
+  python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
+    --case VeeR-EL2:gpu_cov_gate:hello \
+    --build-dir "$WORK_DIR" \
     --nstates 4 \
     --gpu-reps 1 \
-    --skip-cpu-reference-build
+    --skip-cpu-reference-build \
+    --pre-gpu-gate never \
+    2>&1 | grep -v '^{' || true
   echo
   if [ -f "$JSON_OUT" ]; then
     TOGGLE_SUMMARY=$(python3 -c "
 import json
-d = json.load(open('$JSON_OUT'))
-results = d.get('results', [])
-if not results:
-    print('done')
-else:
-    r = results[0]
-    baseline_path = r.get('json_out', '')
-    try:
-        b = json.load(open(baseline_path))
-        cov = b['collector']['coverage']
-        perf = b['collector']['performance']
-        hits  = cov.get('coverage_points_hit', '?')
-        total = cov.get('coverage_points_total', '?')
-        gpu_ms = perf.get('gpu_ms_per_rep')
-        timing = f'{gpu_ms:.0f}ms/rep' if isinstance(gpu_ms, (int, float)) else ''
-        suffix = f'  ({timing})' if timing else ''
-        print(f'{hits}/{total} toggle points covered{suffix}')
-    except Exception:
-        print('done (see ' + baseline_path + ')')
+b = json.load(open('$JSON_OUT'))
+cov = b['collector']['coverage']
+perf = b['collector']['performance']
+hits  = cov.get('coverage_points_hit', '?')
+total = cov.get('coverage_points_total', '?')
+gpu_ms = perf.get('gpu_ms_per_rep')
+timing = f'{gpu_ms:.0f}ms/rep' if isinstance(gpu_ms, (int, float)) else ''
+suffix = f'  ({timing})' if timing else ''
+print(f'{hits}/{total} toggle points covered{suffix}')
 " 2>/dev/null || echo "done (see $JSON_OUT)")
     ok "VeeR-EL2 smoke run complete — $TOGGLE_SUMMARY"
   else
