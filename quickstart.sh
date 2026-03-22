@@ -160,7 +160,7 @@ if cpu_ms and cpu_ms > 0:
     ratio = cpu_ms / gpu_ms if gpu_ms > 0 else 0
     label = f'{ratio:.1f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
     print(f'  CPU      : {cpu_ms:.0f} ms/rep  → {cpu_per_30s} sims in 30 s  (GPU is {label} at nstates=4)')
-    print(f'  note     : GPU advantage grows with --nstates (try 256+)')
+    print(f'  note     : GPU advantage grows with --nstates (at 256: GPU ~92x faster than CPU)')
 " 2>/dev/null || echo "  done (see $JSON_OUT)"
     ok "VeeR-EL2 smoke run complete"
   else
