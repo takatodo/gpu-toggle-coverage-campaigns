@@ -1,0 +1,1643 @@
+{
+  "schema_version": "opentitan-tlul-slice-benchmark-freeze-v1",
+  "slices": [
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_sync.json",
+          "median_cpu_ms_per_rep": 10.747325,
+          "median_gpu_ms_per_rep": 2.989397,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_sync.json",
+          "median_cpu_ms_per_rep": 0.164222,
+          "median_gpu_ms_per_rep": 0.052634,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_fifo_sync",
+      "target": "OpenTitan.tlul_fifo_sync"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_socket_1n.json",
+          "median_cpu_ms_per_rep": 1.981547,
+          "median_gpu_ms_per_rep": 0.331435,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_socket_1n.json",
+          "median_cpu_ms_per_rep": 0.023466,
+          "median_gpu_ms_per_rep": 0.01065,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_socket_1n",
+      "target": "OpenTitan.tlul_socket_1n"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_socket_m1.json",
+          "median_cpu_ms_per_rep": 1.708406,
+          "median_gpu_ms_per_rep": 0.458752,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_socket_m1.json",
+          "median_cpu_ms_per_rep": 0.017154,
+          "median_gpu_ms_per_rep": 0.006726,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_socket_m1",
+      "target": "OpenTitan.tlul_socket_m1"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/xbar_main.json",
+          "median_cpu_ms_per_rep": 4.435144,
+          "median_gpu_ms_per_rep": 0.452949,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/xbar_main.json",
+          "median_cpu_ms_per_rep": 0.061193,
+          "median_gpu_ms_per_rep": 0.010035,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "xbar_main",
+      "target": "OpenTitan.xbar_main"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/xbar_peri.json",
+          "median_cpu_ms_per_rep": 1.344561,
+          "median_gpu_ms_per_rep": 0.4608,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/xbar_peri.json",
+          "median_cpu_ms_per_rep": 0.01366,
+          "median_gpu_ms_per_rep": 0.011469,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "xbar_peri",
+      "target": "OpenTitan.xbar_peri"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_async.json",
+          "median_cpu_ms_per_rep": 1.506635,
+          "median_gpu_ms_per_rep": 0.441003,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_async.json",
+          "median_cpu_ms_per_rep": 22.766052,
+          "median_gpu_ms_per_rep": 0.697685,
+          "nstates": 256,
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_async.json",
+          "median_cpu_ms_per_rep": 0.212913,
+          "median_gpu_ms_per_rep": 0.027307,
+          "nstates": 128,
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_fifo_async.json",
+          "median_cpu_ms_per_rep": 0.017741,
+          "median_gpu_ms_per_rep": 0.018022,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_fifo_async",
+      "target": "OpenTitan.tlul_fifo_async"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/aes_cipher_control.json",
+          "median_cpu_ms_per_rep": 2.3137,
+          "median_gpu_ms_per_rep": 0.369664,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/aes_cipher_control.json",
+          "median_cpu_ms_per_rep": 0.030243,
+          "median_gpu_ms_per_rep": 0.019661,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "aes_cipher_control",
+      "target": "OpenTitan.aes_cipher_control"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_esc_timer.json",
+          "median_cpu_ms_per_rep": 1.000099,
+          "median_gpu_ms_per_rep": 0.424277,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_esc_timer.json",
+          "median_cpu_ms_per_rep": 15.853266,
+          "median_gpu_ms_per_rep": 0.641707,
+          "nstates": 256,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_esc_timer.json",
+          "median_cpu_ms_per_rep": 0.160853,
+          "median_gpu_ms_per_rep": 0.020139,
+          "nstates": 128,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_esc_timer.json",
+          "median_cpu_ms_per_rep": 0.010169,
+          "median_gpu_ms_per_rep": 0.016179,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "alert_handler_esc_timer",
+      "target": "OpenTitan.alert_handler_esc_timer"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_ping_timer.json",
+          "median_cpu_ms_per_rep": 1.292412,
+          "median_gpu_ms_per_rep": 0.397653,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/alert_handler_ping_timer.json",
+          "median_cpu_ms_per_rep": 0.016234,
+          "median_gpu_ms_per_rep": 0.015565,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "alert_handler_ping_timer",
+      "target": "OpenTitan.alert_handler_ping_timer"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/csrng_main_sm.json",
+          "median_cpu_ms_per_rep": 0.902427,
+          "median_gpu_ms_per_rep": 0.380928,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/csrng_main_sm.json",
+          "median_cpu_ms_per_rep": 0.01001,
+          "median_gpu_ms_per_rep": 0.019456,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "csrng_main_sm",
+      "target": "OpenTitan.csrng_main_sm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/edn_main_sm.json",
+          "median_cpu_ms_per_rep": 1.434112,
+          "median_gpu_ms_per_rep": 0.439296,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/edn_main_sm.json",
+          "median_cpu_ms_per_rep": 0.010556,
+          "median_gpu_ms_per_rep": 0.016794,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "edn_main_sm",
+      "target": "OpenTitan.edn_main_sm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/entropy_src_main_sm.json",
+          "median_cpu_ms_per_rep": 0.821322,
+          "median_gpu_ms_per_rep": 0.482987,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 1,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/entropy_src_main_sm.json",
+          "median_cpu_ms_per_rep": 0.008696,
+          "median_gpu_ms_per_rep": 0.015565,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "entropy_src_main_sm",
+      "target": "OpenTitan.entropy_src_main_sm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/lc_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 2.032371,
+          "median_gpu_ms_per_rep": 0.372395,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/lc_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 31.159715,
+          "median_gpu_ms_per_rep": 0.640341,
+          "nstates": 256,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/lc_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 0.364301,
+          "median_gpu_ms_per_rep": 0.021163,
+          "nstates": 128,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/lc_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 0.025687,
+          "median_gpu_ms_per_rep": 0.016179,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "lc_ctrl_fsm",
+      "target": "OpenTitan.lc_ctrl_fsm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/pwrmgr_fsm.json",
+          "median_cpu_ms_per_rep": 1.058674,
+          "median_gpu_ms_per_rep": 0.384,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/pwrmgr_fsm.json",
+          "median_cpu_ms_per_rep": 16.400495,
+          "median_gpu_ms_per_rep": 0.693931,
+          "nstates": 256,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 48,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/pwrmgr_fsm.json",
+          "median_cpu_ms_per_rep": 0.176636,
+          "median_gpu_ms_per_rep": 0.017067,
+          "nstates": 128,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/pwrmgr_fsm.json",
+          "median_cpu_ms_per_rep": 0.013531,
+          "median_gpu_ms_per_rep": 0.019046,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "pwrmgr_fsm",
+      "target": "OpenTitan.pwrmgr_fsm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 32,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 32,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 32,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/rom_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 0.664454,
+          "median_gpu_ms_per_rep": 0.248491,
+          "nstates": 32,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_medium",
+          "sequential_steps": 32,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/rom_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 10.46233,
+          "median_gpu_ms_per_rep": 0.3328,
+          "nstates": 256,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 32,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/rom_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 0.153545,
+          "median_gpu_ms_per_rep": 0.022528,
+          "nstates": 128,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_runtime_truth_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/rom_ctrl_fsm.json",
+          "median_cpu_ms_per_rep": 0.009997,
+          "median_gpu_ms_per_rep": 0.017408,
+          "nstates": 16,
+          "runtime_truth_status": "truth_alive",
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "rom_ctrl_fsm",
+      "target": "OpenTitan.rom_ctrl_fsm"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_err.json",
+          "median_cpu_ms_per_rep": 1.504749,
+          "median_gpu_ms_per_rep": 0.420523,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_err.json",
+          "median_cpu_ms_per_rep": 22.835609,
+          "median_gpu_ms_per_rep": 0.697685,
+          "nstates": 256,
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_err.json",
+          "median_cpu_ms_per_rep": 0.213391,
+          "median_gpu_ms_per_rep": 0.022187,
+          "nstates": 128,
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_err.json",
+          "median_cpu_ms_per_rep": 0.01427,
+          "median_gpu_ms_per_rep": 0.019661,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_err",
+      "target": "OpenTitan.tlul_err"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_request_loopback.json",
+          "median_cpu_ms_per_rep": 0.630375,
+          "median_gpu_ms_per_rep": 0.426667,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_request_loopback.json",
+          "median_cpu_ms_per_rep": 12.388613,
+          "median_gpu_ms_per_rep": 0.480939,
+          "nstates": 256,
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_request_loopback.json",
+          "median_cpu_ms_per_rep": 0.114762,
+          "median_gpu_ms_per_rep": 0.016384,
+          "nstates": 128,
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_request_loopback.json",
+          "median_cpu_ms_per_rep": 0.006359,
+          "median_gpu_ms_per_rep": 0.017613,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_request_loopback",
+      "target": "OpenTitan.tlul_request_loopback"
+    },
+    {
+      "recommended_profiles": {
+        "campaign": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step": {
+          "cpu_reps": 1,
+          "gpu_reps": 5,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "sweep": {
+          "cpu_reps": 1,
+          "gpu_reps": 3,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        }
+      },
+      "scenarios": {
+        "multi_step_medium": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a representative medium multi-step baseline",
+          "gpu_reps": 3,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_sink.json",
+          "median_cpu_ms_per_rep": 3.941219,
+          "median_gpu_ms_per_rep": 0.613035,
+          "nstates": 32,
+          "scenario": "multi_step_medium",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "multi_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher multi-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_sink.json",
+          "median_cpu_ms_per_rep": 30.245888,
+          "median_gpu_ms_per_rep": 0.786432,
+          "nstates": 256,
+          "scenario": "multi_step_occupancy",
+          "sequential_steps": 56,
+          "status": "frozen"
+        },
+        "single_step_occupancy": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "probe higher single-step occupancy and throughput",
+          "gpu_reps": 3,
+          "iterations": 3,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_sink.json",
+          "median_cpu_ms_per_rep": 0.465616,
+          "median_gpu_ms_per_rep": 0.037547,
+          "nstates": 128,
+          "scenario": "single_step_occupancy",
+          "sequential_steps": 1,
+          "status": "frozen"
+        },
+        "single_step_small": {
+          "all_compact_match": true,
+          "all_observability_ready": true,
+          "all_tb_contract_pass": true,
+          "cpu_reps": 1,
+          "goal": "freeze a low-latency single-step baseline",
+          "gpu_reps": 5,
+          "iterations": 5,
+          "launch_template": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_launch_templates/tlul_sink.json",
+          "median_cpu_ms_per_rep": 0.056574,
+          "median_gpu_ms_per_rep": 0.02601,
+          "nstates": 16,
+          "scenario": "single_step_small",
+          "sequential_steps": 1,
+          "status": "frozen"
+        }
+      },
+      "slice_name": "tlul_sink",
+      "target": "OpenTitan.tlul_sink"
+    }
+  ],
+  "source_results_json": "/tmp/alert_handler_esc_timer_bench_review_v3/benchmark_results.json",
+  "source_results_jsons": [
+    "/tmp/alert_handler_esc_timer_bench_review_v3/benchmark_results.json",
+    "/tmp/alert_handler_esc_timer_bench_review_v2/benchmark_results.json",
+    "/tmp/alert_handler_esc_timer_bench_review_v1/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_review_v6/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_review_v2/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_review/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_single_v5/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_single_v4/benchmark_results.json",
+    "/tmp/rom_ctrl_fsm_bench_single_v3/benchmark_results.json",
+    "/tmp/lc_ctrl_fsm_bench_review_v1/benchmark_results.json",
+    "/tmp/pwrmgr_fsm_bench_review_v3/benchmark_results.json",
+    "/tmp/alert_handler_ping_timer_bench_review_v3/benchmark_results.json",
+    "/tmp/entropy_src_main_sm_bench_quick/combined_results.json",
+    "/tmp/aes_cipher_control_freeze_v1/benchmark_results.json",
+    "/tmp/csrng_benchmark_pipeline_v1/benchmark_results.json",
+    "/tmp/edn_main_sm_benchmark_freeze_pipeline_v2/benchmark_results.json",
+    "/tmp/edn_main_sm_benchmark_freeze_pipeline_v1/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_multi_v4/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_multi_v3/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_multi_v2/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_multi_v1/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_v2/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_v1/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_probe3/benchmark_results.json",
+    "/tmp/edn_main_sm_bench_review_probe/benchmark_results.json",
+    "/tmp/tlul_sink_bench_review_v3/benchmark_results.json",
+    "/tmp/tlul_sink_bench_review_v2/benchmark_results.json",
+    "/tmp/tlul_err_bench_review_v1/benchmark_results.json",
+    "/tmp/tlul_request_loopback_bench_review_v2/benchmark_results.json",
+    "/tmp/tlul_request_loopback_bench_review_v1/benchmark_results.json",
+    "/tmp/tlul_fifo_async_bench_review_v3/benchmark_results.json",
+    "/tmp/tlul_fifo_async_bench_review_v1/benchmark_results.json",
+    "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/opentitan_tlul_slice_benchmark_results_merged.json"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "opentitan-tlul-slice-runtime-contract-waivers-v1",
+  "slices": [
+    {
+      "slice_name": "xbar_main",
+      "allowed_runtime_missing_required_outputs": [
+        "real_toggle_subset_word1_o",
+        "real_toggle_subset_word2_o",
+        "real_toggle_subset_word3_o"
+      ],
+      "reason": "sim_accel_runtime_comm_direction_misclassifies_selected_subset_words_as_cpu_to_gpu_while_the_static_tb_contract_is_satisfied",
+      "notes": [
+        "focused_wave_word1_o through focused_wave_word3_o remain emitted as gpu_to_cpu and carry the same per-host acceptance summary family needed for bring-up.",
+        "Campaign bring-up validated nonzero xbar_main hits with this runtime limitation still present."
+      ]
+    }
+  ]
+}

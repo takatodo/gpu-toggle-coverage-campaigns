@@ -3399,6 +3399,7 @@ def _run_bundle_backend(
                         ]
                     )
                 build_cmd.extend(["--execution-backend", execution_backend])
+                bundle_dir.mkdir(parents=True, exist_ok=True)
                 for attempt in range(3):
                     try:
                         subprocess.run(prepare_cmd, cwd=bundle_dir, check=True)

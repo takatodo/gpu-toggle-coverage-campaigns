@@ -120,7 +120,7 @@
     "runner_generalization_required": false
   },
   "runner_args_template": {
-    "batch_defaults_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_defaults_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
     "batch_length": 80,
     "campaign_gpu_nstates": 512,
     "campaign_sequential_rep_graph_mode": "auto",
@@ -171,7 +171,7 @@
     "pilot_campaign_candidate_count": 4096,
     "pilot_sweep_cases": 256,
     "profile_family": "mixed",
-    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/entropy_src_main_sm.sv",
+    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/entropy_src_main_sm.sv",
     "seed_fanout": 1,
     "shard_count": 128,
     "states_per_case": 4,
@@ -180,7 +180,7 @@
     "trace_length": 16,
     "uniform_states": true,
     "variants_per_case": 5,
-    "work_dir": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_pilots/entropy_src_main_sm"
+    "work_dir": "/home/takatodo/gpu-toggle-coverage-campaigns/work/slice_pilots/entropy_src_main_sm"
   },
   "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
   "schema_version": "opentitan-tlul-slice-launch-template-v1",
@@ -214,7 +214,7 @@
     ],
     "rtl_input_port_count": 12,
     "rtl_output_port_count": 11,
-    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/entropy_src_main_sm.sv",
+    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/entropy_src_main_sm.sv",
     "rtl_reset_ports": [
       "rst_ni"
     ],

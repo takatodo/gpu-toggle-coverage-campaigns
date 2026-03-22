@@ -89,13 +89,13 @@
     "runner_generalization_required": false
   },
   "runner_args_template": {
-    "batch_defaults_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
+    "batch_defaults_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/tests/tlul_slice_batch_default.json",
     "batch_length": 56,
     "campaign_gpu_nstates": 512,
     "campaign_sequential_rep_graph_mode": "never",
     "cases": 25000,
     "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/xbar_peri_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
+    "coverage_tb_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
     "debug_internal_output_names": [],
@@ -132,7 +132,7 @@
     "pilot_campaign_candidate_count": 6144,
     "pilot_sweep_cases": 384,
     "profile_family": "dead-region",
-    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/xbar_peri.sv",
+    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/xbar_peri.sv",
     "seed_fanout": 1,
     "shard_count": 256,
     "states_per_case": 4,
@@ -141,7 +141,7 @@
     "trace_length": 24,
     "uniform_states": true,
     "variants_per_case": 10,
-    "work_dir": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/slice_pilots/xbar_peri"
+    "work_dir": "/home/takatodo/gpu-toggle-coverage-campaigns/work/slice_pilots/xbar_peri"
   },
   "runtime_rule_source": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/archive/opentitan_tlul_slice_execution_profiles.json",
   "schema_version": "opentitan-tlul-slice-launch-template-v1",
@@ -149,7 +149,7 @@
   "static_features": {
     "base_outputs_ready": true,
     "coverage_manifest_path": "/home/takatodo/GEM_try/out/opentitan_tlul_fifo_sync_trace_gpu_campaign_100k/source_stage/OpenTitan/tests/xbar_peri_coverage_regions.json",
-    "coverage_tb_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
+    "coverage_tb_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
     "exclusive_word_count": 18,
     "exclusive_word_fraction": 1.0,
     "focused_wave_ready": true,
@@ -175,7 +175,7 @@
     ],
     "rtl_input_port_count": 31,
     "rtl_output_port_count": 28,
-    "rtl_path": "/home/takatodo/GEM_try/rtlmeter/designs/OpenTitan/src/xbar_peri.sv",
+    "rtl_path": "/home/takatodo/gpu-toggle-coverage-campaigns/third_party/rtlmeter/designs/OpenTitan/src/xbar_peri.sv",
     "rtl_reset_ports": [
       "rst_peri_ni",
       "tl_rstmgr_aon_i",
