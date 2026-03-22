@@ -135,31 +135,39 @@ hits  = cov.get('coverage_points_hit', '?')
 total = cov.get('coverage_points_total', '?')
 gpu_ms = perf.get('gpu_ms_per_rep') or 0.0
 
-# CPU: invoke bench_kernel directly with same nstates, cpu-reps=1, gpu-reps=0
-cpu_ms = None
+# CPU: measure 1 state (fast), then compute per-sim for fair comparison
+NSTATES = 256
+cpu_ms_1 = None
 rt_cmd = b.get('bench_runtime_command', [])
 if rt_cmd:
     cmd = rt_cmd[:]
     for i, v in enumerate(cmd):
+        if v == '--nstates':         cmd[i+1] = '1'
         if v == '--cpu-reps':        cmd[i+1] = '1'
         if v == '--gpu-reps':        cmd[i+1] = '0'
         if v == '--gpu-warmup-reps': cmd[i+1] = '0'
     r = subprocess.run(cmd, capture_output=True, text=True)
     for line in r.stdout.splitlines():
         if line.startswith('cpu_ms_per_rep='):
-            try: cpu_ms = float(line.split('=')[1])
+            try: cpu_ms_1 = float(line.split('=')[1])
             except: pass
+
+# per-sim: GPU runs NSTATES in parallel; CPU runs 1 at a time
+gpu_per_sim = gpu_ms / NSTATES if gpu_ms > 0 else None
+cpu_per_sim = cpu_ms_1  # nstates=1 == 1 sim
 
 WINDOW = 30_000
 gpu_per_30s = int(WINDOW / gpu_ms) if gpu_ms > 0 else '?'
-cpu_per_30s = int(WINDOW / cpu_ms) if cpu_ms and cpu_ms > 0 else '?'
+cpu_equiv_ms = cpu_ms_1 * NSTATES if cpu_ms_1 else None
+cpu_per_30s  = int(WINDOW / cpu_equiv_ms) if cpu_equiv_ms and cpu_equiv_ms > 0 else '?'
 
 print(f'  coverage : {hits}/{total} toggle points')
-print(f'  GPU      : {gpu_ms:.0f} ms/rep  → {gpu_per_30s} sims in 30 s')
-if cpu_ms and cpu_ms > 0:
-    ratio = cpu_ms / gpu_ms if gpu_ms > 0 else 0
+print(f'  GPU      : {gpu_ms:.0f} ms / {NSTATES} states  ({gpu_per_sim:.1f} ms/sim)  → {gpu_per_30s} batches in 30 s')
+if cpu_per_sim:
+    equiv_ms = cpu_per_sim * NSTATES
+    ratio = equiv_ms / gpu_ms if gpu_ms > 0 else 0
     label = f'{ratio:.1f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
-    print(f'  CPU      : {cpu_ms:.0f} ms/rep  → {cpu_per_30s} sims in 30 s  (GPU is {label})')
+    print(f'  CPU      : {cpu_per_sim:.0f} ms/sim × {NSTATES} = {equiv_ms:.0f} ms equiv  (GPU is {label})')
 " 2>/dev/null || echo "  done (see $WORK_DIR)"
     ok "VeeR-EL2 smoke run complete"
   else
