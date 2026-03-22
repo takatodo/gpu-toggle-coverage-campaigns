@@ -8,3 +8,4 @@ third_party/verilator/bin/verilator_bin_dbg
 third_party/verilator/bin/verilator_coverage_bin_dbg
 work/*
 !work/.gitkeep
+src/sim_accel/third_party/
