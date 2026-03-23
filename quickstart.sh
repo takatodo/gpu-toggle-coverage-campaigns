@@ -66,9 +66,25 @@ GPU_OK=1
 if [ -x "$BENCH" ]; then
   ok "verilator_sim_accel_bench found"
 else
-  warn "verilator_sim_accel_bench not found at third_party/verilator/bin/"
-  warn "build from source: cd third_party/verilator && ./configure && make -j\$(nproc)"
-  GPU_OK=0
+  # third_party/verilator is the upstream fork (no sim-accel).
+  # Check common locations for a sim-accel build.
+  FALLBACK_BENCH=""
+  for candidate in \
+    "$HOME/GEM_try/verilator/bin/verilator_sim_accel_bench" \
+    "$HOME/verilator/bin/verilator_sim_accel_bench"; do
+    if [ -x "$candidate" ]; then
+      FALLBACK_BENCH="$candidate"
+      break
+    fi
+  done
+  if [ -n "$FALLBACK_BENCH" ]; then
+    ok "verilator_sim_accel_bench found at $FALLBACK_BENCH (sim-accel fork)"
+    BENCH="$FALLBACK_BENCH"
+  else
+    warn "verilator_sim_accel_bench not found"
+    warn "build the sim-accel Verilator fork and install to third_party/verilator/bin/"
+    GPU_OK=0
+  fi
 fi
 if command -v nvcc &>/dev/null; then
   ok "nvcc $(nvcc --version 2>&1 | grep -o 'release [0-9.]*')"
@@ -111,7 +127,10 @@ else
   WORK_DIR="work/quickstart/VeeR-EL2/gpu_cov_gate"
   mkdir -p "$WORK_DIR"
   echo "  output → $WORK_DIR"
+  VLR="$(dirname "$BENCH")/verilator"
   RUNNER_COMMON=(
+    --bench "$BENCH"
+    --verilator "$VLR"
     --case VeeR-EL2:gpu_cov_gate:hello
     --build-dir "$WORK_DIR"
     --nstates 256
@@ -126,7 +145,7 @@ else
   # clang++ -emit-llvm, merged with llvm-link, assembled with llc, then ptxas
   # produces a cubin (no runtime JIT penalty).
   # Only rebuild when the vl_ir cubin is absent (first run or after clean).
-  if [ ! -f "$WORK_DIR/vl_ir/kernel_generated.vl_ir.cubin" ]; then
+  if [ ! -f "$WORK_DIR/kernel_generated.vl_ir.cubin" ]; then
     echo "  Building cuda_vl_ir bench_kernel (first time, ~3 min) ..."
     python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
       "${RUNNER_COMMON[@]}" \
@@ -135,59 +154,43 @@ else
     echo
   fi
 
-  # ── 6b. Measurement run ──────────────────────────────────────────────────────
-  GPU_JSON=$(python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
-    "${RUNNER_COMMON[@]}" \
-    2>/dev/null | grep '^{' | tail -1)
-  echo
-  if [ -n "$GPU_JSON" ]; then
-    python3 -c "
-import json, subprocess, sys
-
-b = json.loads('''$GPU_JSON''')
-cov  = b['collector']['coverage']
-perf = b['collector']['performance']
-hits  = cov.get('coverage_points_hit', '?')
-total = cov.get('coverage_points_total', '?')
-gpu_ms = perf.get('gpu_ms_per_rep') or 0.0
-
-# CPU: measure 1 state (fast), then compute per-sim for fair comparison
-NSTATES = 256
-cpu_ms_1 = None
-rt_cmd = b.get('bench_runtime_command', [])
-if rt_cmd:
-    cmd = rt_cmd[:]
-    for i, v in enumerate(cmd):
-        if v == '--nstates':         cmd[i+1] = '1'
-        if v == '--cpu-reps':        cmd[i+1] = '1'
-        if v == '--gpu-reps':        cmd[i+1] = '0'
-        if v == '--gpu-warmup-reps': cmd[i+1] = '0'
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    for line in r.stdout.splitlines():
-        if line.startswith('cpu_ms_per_rep='):
-            try: cpu_ms_1 = float(line.split('=')[1])
-            except: pass
-
-# per-sim: GPU runs NSTATES in parallel; CPU runs 1 at a time
-gpu_per_sim = gpu_ms / NSTATES if gpu_ms > 0 else None
-cpu_per_sim = cpu_ms_1  # nstates=1 == 1 sim
-
-WINDOW = 30_000
-gpu_per_30s = int(WINDOW / gpu_ms) if gpu_ms > 0 else '?'
-cpu_equiv_ms = cpu_ms_1 * NSTATES if cpu_ms_1 else None
-cpu_per_30s  = int(WINDOW / cpu_equiv_ms) if cpu_equiv_ms and cpu_equiv_ms > 0 else '?'
-
-print(f'  coverage : {hits}/{total} toggle points')
-print(f'  GPU      : {gpu_ms:.0f} ms / {NSTATES} states  ({gpu_per_sim:.1f} ms/sim)  → {gpu_per_30s} batches in 30 s')
-if cpu_per_sim:
-    equiv_ms = cpu_per_sim * NSTATES
-    ratio = equiv_ms / gpu_ms if gpu_ms > 0 else 0
-    label = f'{ratio:.1f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
-    print(f'  CPU      : {cpu_per_sim:.0f} ms/sim × {NSTATES} = {equiv_ms:.0f} ms equiv  (GPU is {label})')
-" 2>/dev/null || echo "  done (see $WORK_DIR)"
-    ok "VeeR-EL2 smoke run complete"
+  # ── 6b. Measurement run — call bench_kernel_vl_ir_cpu directly ──────────────
+  BENCH_KERNEL="$WORK_DIR/bench_kernel_vl_ir_cpu"
+  INIT_FILE="$WORK_DIR/gpu_driver.init"
+  NSTATES=256
+  if [ ! -x "$BENCH_KERNEL" ]; then
+    warn "bench_kernel_vl_ir_cpu not found — skipping measurement"
   else
-    ok "VeeR-EL2 smoke run complete (see $WORK_DIR)"
+    BENCH_OUT=$(SIM_ACCEL_GPU_BINARY_PATH="$WORK_DIR/kernel_generated.vl_ir.cubin" \
+      "$BENCH_KERNEL" \
+      ${INIT_FILE:+--init-file "$INIT_FILE"} \
+      --nstates $NSTATES --gpu-reps 3 --gpu-warmup-reps 1 --cpu-reps 0 \
+      --sequential-steps 1 2>/dev/null || true)
+    GPU_MS=$(echo "$BENCH_OUT" | grep '^gpu_ms_per_rep=' | cut -d= -f2)
+    COV_HIT=$(echo "$BENCH_OUT" | grep '^coverage_points_hit=' | cut -d= -f2 || true)
+    COV_TOT=$(echo "$BENCH_OUT" | grep '^coverage_points_total=' | cut -d= -f2 || true)
+
+    CPU_OUT=$(SIM_ACCEL_GPU_BINARY_PATH="$WORK_DIR/kernel_generated.vl_ir.cubin" \
+      "$BENCH_KERNEL" \
+      ${INIT_FILE:+--init-file "$INIT_FILE"} \
+      --nstates 1 --gpu-reps 0 --cpu-reps 1 \
+      --sequential-steps 1 2>/dev/null || true)
+    CPU_MS=$(echo "$CPU_OUT" | grep '^cpu_ms_per_rep=' | cut -d= -f2)
+
+    echo
+    python3 -c "
+g=${GPU_MS:-0}; c=${CPU_MS:-0}; n=$NSTATES
+hit='${COV_HIT:-?}'; tot='${COV_TOT:-?}'
+print(f'  coverage : {hit}/{tot} toggle points')
+if g > 0:
+    gpu_per_sim = g/n
+    print(f'  GPU      : {g:.0f} ms / {n} states  ({gpu_per_sim:.2f} ms/sim)')
+if c > 0 and g > 0:
+    ratio = (c*n)/g
+    label = f'{ratio:.0f}x faster' if ratio > 1 else f'{1/ratio:.1f}x slower'
+    print(f'  CPU      : {c:.2f} ms/sim × {n} = {c*n:.0f} ms equiv  (GPU is {label})')
+" 2>/dev/null || true
+    ok "VeeR-EL2 smoke run complete"
   fi
   echo
   echo -e "${GREEN}All done.${RESET} Next steps:"
