@@ -170,18 +170,21 @@ RTL (SystemVerilog)
 | tlul_request_loopback | 192 bytes | ✓ | ~2.6 ns |
 | tlul_socket_m1 | 2048 bytes | ✓ | ~13.5 ns |
 
-**Convergence loop workaround (`patch_convergence_exit`):**
+**Convergence loop and runtime safety:**
 
 When Verilator is built with `--no-timing`, timed testbench constructs such as
 `always #5 clk_i = ~clk_i` become combinational feedback loops. Then `eval_phase__ico`
 stays true and the convergence loop never terminates.
 
-`patch_convergence_exit` in `gen_vl_gpu_kernel.py` applies these CFG edits:
-1. **Fatal block redirect:** after `VL_FATAL_MT`, rewrite `br label %BODY` → `br label %EXIT`.
+1–2 are implemented in LLVM IR by **`VlPatchConvergencePass`** (`src/passes/VlGpuPasses.cpp`), run from
+`build_vl_gpu.py` via `opt-18 --load-pass-plugin=... -passes=lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence`:
+
+1. **Fatal block redirect:** after `VL_FATAL_MT`, rewrite the fatal block’s branch to `%exit` instead of `%body`.
 2. **Single-pass threshold:** `icmp ugt i32 %N, 100` → `icmp ugt i32 %N, 0`
-   (fatal fires after the first body iteration → exit the convergence loop in at most 2 iterations).
-3. **VerilatedSyms stub:** functions that touch the vlSyms pointer (field `[6]`), e.g. `nba_comb`,
-   are stubbed at runtime (zero-initialized buffer avoids NULL dereferences).
+   (fatal after the first body iteration → at most two iterations to leave the loop).
+
+3. **VerilatedSyms / vlSymsp:** still handled in **`gen_vl_gpu_kernel.py`**: `is_runtime()` forces some
+   reached functions to stubs; `detect_vlsyms_offset()` + `@fake_syms_buf` avoid NULL dereferences on GPU.
 
 **Comparison vs. CIRCT path:**
 
@@ -195,62 +198,100 @@ stays true and the convergence loop never terminates.
 | Extern stubs | not required | `VL_FATAL_MT` + VerilatedSyms-related |
 
 **Files:**
-- `src/tools/gen_vl_gpu_kernel.py` — merged.ll → NVPTX GPU kernel generator
-- `src/tools/build_vl_gpu.py` — Verilator `--cc` output dir → cubin build driver
+- `src/tools/gen_vl_gpu_kernel.py` — merged.ll → NVPTX GPU kernel generator (reachability, stubs, kernel IR text)
+- `src/tools/build_vl_gpu.py` — Verilator `--cc` output dir → cubin build driver (`opt` + `VlGpuPasses.so`)
+- `src/passes/VlGpuPasses.cpp` — `vl-strip-x86-attrs`, `vl-patch-convergence` (plugin `.so`)
+- `src/passes/vlgpugen.cpp` — standalone analyzer toward Option B (`vlgpugen` binary, same `make`)
 - `work/vl_ir_exp/loopback_vl/` — tlul_request_loopback: Verilator C++ / LLVM IR / cubin
 - `work/vl_ir_exp/socket_m1_vl/` — tlul_socket_m1: Verilator C++ / LLVM IR / cubin
 - `work/vl_ir_exp/bench_vl_sweep.cu` — NSTATES sweep benchmark (`STORAGE_SIZE` macro)
 
-### Python layout (current)
+### Pipeline layout (current)
 
-`gen_vl_gpu_kernel.py` is the orchestrator only; IR transforms live in four modules:
+| Stage | Location | Responsibility |
+|-------|----------|----------------|
+| EH lowering | `opt -passes=lowerinvoke` | `invoke` → `call` (LLVM built-in) |
+| Strip x86 / convergence CFG | `VlGpuPasses.so` | `vl-strip-x86-attrs`, `vl-patch-convergence` |
+| Reachability, stubs, kernel, TBAA scrape | Python | `gen_vl_gpu_kernel.py` + helpers below |
+
+**Python modules (`src/tools/`):**
 
 | File | Role |
 |------|------|
-| `llvm_ir_parse.py` | IR text → dict/set (pure) |
-| `llvm_ir_patch.py` | `strip_x86_attrs`, `lower_invoke_to_call`, `patch_convergence_exit` |
-| `llvm_stub_gen.py` | no-op stubs for external functions |
+| `llvm_ir_parse.py` | IR text → dict/set (pure); `reachable_from`, `external_calls` |
+| `llvm_stub_gen.py` | `make_no_op_stub` — extern → empty `define` bodies (text) |
 | `vl_runtime_filter.py` | `is_runtime()`, `detect_vlsyms_offset()` |
+
+There is **no** `llvm_ir_patch.py`; lowering and CFG/attribute fixes run in `opt`, not regex on `.ll`.
 
 ### C++ pass migration plan
 
-Move regex-based IR edits in Python to LLVM C++ passes incrementally.
-Goal: plug into the stock LLVM pipeline via `opt -load-pass-plugin=vl_gpu_passes.so`.
-
-**Python step → LLVM C++ mapping:**
-
-| Python | Kind | C++ |
-|--------|------|-----|
-| `lower_invoke_to_call` | strip EH | `-lowerinvoke` **built-in pass** (no custom code) |
-| `strip_x86_attrs` | strip attrs | custom `FunctionPass` |
-| `patch_convergence_exit` | CFG edit | custom `FunctionPass` |
-| `make_no_op_stub` | extern → define | custom `ModulePass` |
-| `reachable_from` + `is_runtime` | reachability / filtering | custom `ModulePass` (CallGraph) |
-| `detect_vlsyms_offset` | TBAA scrape | inside `ModulePass` or keep in Python |
-| kernel wrapper | inject function | custom `ModulePass` |
-
-**Phased rollout:**
-
-| Phase | Work | Touch points |
-|-------|------|--------------|
-| 1 | Drop `lower_invoke_to_call`; use `-lowerinvoke` | add `-passes=lowerinvoke` to `opt` in `build_vl_gpu.py`; remove the Python helper from `llvm_ir_patch.py` |
-| 2 | Implement `VlStripX86Attrs` + `VlPatchConvergence` as `FunctionPass`es | `src/passes/VlGpuPasses.cpp` + CMakeLists |
-| 3 | Implement `VlStubRuntime` + `VlInjectKernel` as `ModulePass`es; retire Python | fold into standalone `vlgpugen` tool |
-
-**Target pipeline (after phase 3):**
+**Option A — `opt` plugin + Python orchestrator (current direction):**
 
 ```
 merged.ll
-    ↓
-vlgpugen merged.ll --storage-size=N --sm=sm_89
-    (LLVM API: CallGraph reachability → stub injection → kernel insertion)
-    ↓
-vl_batch_gpu.ll
-    ↓
-opt -O3 | llc -march=nvptx64 | ptxas
-    ↓
-cubin
+  → python: gen_vl_gpu_kernel.py → vl_batch_gpu.ll (subset + stubs + kernel)
+  → opt --load-pass-plugin=VlGpuPasses.so -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence"
+  → opt -O3 → llc → ptxas → cubin
 ```
+
+Python keeps: reachability + `is_runtime`, stub text generation, `detect_vlsyms_offset`, kernel injection.
+Good for incremental migration and experiments.
+
+**Option B — standalone `vlgpugen` (target):** single binary using the LLVM API; no regex on IR text.
+Higher implementation cost (CMake or robust Makefile, link against `libLLVM`).
+
+**Option A vs. Option B:**
+
+| | **Option A** (`opt` plugin + Python) | **Option B** (`vlgpugen`) |
+|---|--------------------------------------|---------------------------|
+| **IR representation** | Text `.ll`; Python regex/splicing + `opt` on the same file | In-memory `Module`; no string IR edits |
+| **Entry commands** | `gen_vl_gpu_kernel.py` → `opt` (plugin + built-ins) → `opt -O3` → `llc` → `ptxas` | `vlgpugen merged.ll …` → `opt` → `llc` → `ptxas` (or embedded passes) |
+| **Reachability / stubs / kernel** | Python (`llvm_ir_parse`, `llvm_stub_gen`, `vl_runtime_filter`) | C++ `ModulePass`es (CallGraph, stub inject, kernel inject) |
+| **Build** | Small plugin `.so` (`make -C src/passes`) + `python3` | Link `libLLVM` (larger link line; CMake optional) |
+| **Pros** | Fast iteration; keeps experimental scripts; clear split: “emit kernel IR” vs “clean for NVPTX” | No regex fragility; LLVM upgrades touch typed API; single artifact to ship |
+| **Cons** | Python/C++ boundary; TBAA/stub logic duplicated in spirit with IR text | Up-front cost; must reimplement what Python already does |
+| **Fit** | **Current repo** (Phase 1–2 done here) | **Target** when stub/kernel/TBAA move to C++ (Phase 3) |
+
+**Python logic → LLVM mapping (target end state for B):**
+
+| Logic today | Kind | LLVM / tool |
+|-------------|------|-------------|
+| (done) EH | strip exception handling | `-lowerinvoke` |
+| (done) x86 noise | attrs / comdat / personality | `VlStripX86AttrsPass` |
+| (done) convergence loop | CFG | `VlPatchConvergencePass` |
+| `make_no_op_stub` | extern → define | custom `ModulePass` |
+| `reachable_from` + `is_runtime` | filter functions | custom `ModulePass` (CallGraph) |
+| `detect_vlsyms_offset` | TBAA | `ModulePass` or keep in Python |
+| `vl_eval_batch_gpu` | inject kernel | custom `ModulePass` |
+
+**Phased rollout:**
+
+| Phase | Status | Work |
+|-------|--------|------|
+| 1 | **done** | `lowerinvoke` only via `opt` in `build_vl_gpu.py` (no Python `lower_invoke_to_call`) |
+| 2 | **done** | `VlStripX86Attrs` + `VlPatchConvergence` in `src/passes/VlGpuPasses.cpp` + `src/passes/Makefile` |
+| 3 | **in progress** | `vlgpugen` (`make -C src/passes`): analysis tool (eval, direct-call reachability, runtime vs GPU, TBAA offset). Stub/kernel IR emission still in `gen_vl_gpu_kernel.py`. |
+
+**Production pipeline (today):**
+
+```
+merged.ll
+    ↓ gen_vl_gpu_kernel.py → vl_batch_gpu.ll
+    ↓ opt --load-pass-plugin=VlGpuPasses.so
+          -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence"
+    ↓ opt -O3 | llc -march=nvptx64 | ptxas
+    ↓ cubin
+```
+
+**Optional — compare with Python (`vlgpugen` analysis only):**
+
+```bash
+make -C src/passes
+./src/passes/vlgpugen path/to/merged.ll --storage-size=2048
+```
+
+Same reachability / runtime / TBAA heuristics as the Python path; does not emit `vl_batch_gpu.ll` yet.
 
 **LLVM version bumps:**
 

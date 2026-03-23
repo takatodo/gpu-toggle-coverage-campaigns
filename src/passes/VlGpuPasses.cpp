@@ -1,16 +1,23 @@
 /**
  * VlGpuPasses.cpp
  *
- * LLVM opt pass plugin for Verilator → NVPTX GPU kernel generation.
+ * LLVM NewPM pass plugin for the stock-Verilator → NVPTX path (see README “Pipeline layout”).
  *
- * Passes:
- *   vl-strip-x86-attrs   FunctionPass  x86 固有属性 / comdat / personality を除去
- *   vl-patch-convergence FunctionPass  収束ループの無限ハング回避 CFG パッチ
+ * Passes (registered names for -passes=...):
+ *   vl-strip-x86-attrs    FunctionPass  strip x86-only attrs, comdat, personality; demote linkonce_odr
+ *   vl-patch-convergence  FunctionPass  break infinite convergence loops after VL_FATAL_MT stubs
+ *
+ * EH lowering is **not** implemented here: use LLVM’s built-in `lowerinvoke` before these passes
+ * (see build_vl_gpu.py: lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence).
+ *
+ * Migration (Option A — current): Python gen_vl_gpu_kernel.py emits vl_batch_gpu.ll; this plugin
+ * cleans IR; then opt -O3 / llc / ptxas. Option B (target): standalone vlgpugen with ModulePasses
+ * for reachability, stubs, TBAA offset, and kernel injection — see README “C++ pass migration plan”.
  *
  * Usage:
- *   opt-18 --load-pass-plugin=VlGpuPasses.so \
- *          -passes="lowerinvoke,vl-strip-x86-attrs,vl-patch-convergence,default<O3>" \
- *          -S vl_batch_gpu.ll -o vl_batch_gpu_opt.ll
+ *   opt-18 --load-pass-plugin=./VlGpuPasses.so \
+ *          -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence" \
+ *          -S vl_batch_gpu.ll -o vl_batch_gpu_patched.ll
  *
  * Build:
  *   make -C src/passes
@@ -28,13 +35,12 @@ using namespace llvm;
 
 // ─── VlStripX86AttrsPass ──────────────────────────────────────────────────────
 //
-// clang++ -emit-llvm が付加する x86 固有の要素を NVPTX 向けに除去する。
+// Remove x86-oriented metadata from clang++ -emit-llvm output before NVPTX.
 //
-//   - 関数属性 (#N)         → setAttributes(empty)
-//   - comdat 参照           → setComdat(nullptr)
-//   - personality 関数      → clearPersonalityFn()
-//   - linkonce_odr リンケージ → internal に降格
-//     (NVPTX では linkonce_odr がリンカ警告を出すため)
+//   - function attributes (#N)     → setAttributes(empty)
+//   - comdat                     → setComdat(nullptr)
+//   - personality                → clearPersonalityFn()
+//   - linkonce_odr linkage       → internal (NVPTX linkers warn on linkonce_odr)
 
 struct VlStripX86AttrsPass : public PassInfoMixin<VlStripX86AttrsPass> {
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
@@ -44,16 +50,16 @@ struct VlStripX86AttrsPass : public PassInfoMixin<VlStripX86AttrsPass> {
             F.setPersonalityFn(nullptr);
         if (F.getLinkage() == GlobalValue::LinkOnceODRLinkage)
             F.setLinkage(GlobalValue::InternalLinkage);
-        return PreservedAnalyses::all();  // CFG/値を変更しないので解析保存
+        return PreservedAnalyses::all();  // no CFG/value change
     }
 };
 
 // ─── VlPatchConvergencePass ───────────────────────────────────────────────────
 //
-// Verilator が --no-timing でコンパイルした際に生成される収束ループを
-// GPU 上で無限ハングしないようにパッチする。
+// Patch Verilator’s convergence loop (seen with --no-timing TB) so it cannot spin forever
+// on GPU after VL_FATAL_MT becomes a no-op stub.
 //
-// Verilator の eval 関数は以下の構造を持つ:
+// Typical eval shape:
 //
 //   header:
 //     %iter1 = add i32 %iter, 1
@@ -65,18 +71,18 @@ struct VlStripX86AttrsPass : public PassInfoMixin<VlStripX86AttrsPass> {
 //     br i1 %again, label %header, label %exit
 //
 //   fatal:
-//     call void @VL_FATAL_MT(...)   ; GPU 上では no-op stub
-//     br label %body                 ; ← ここが問題: stub 後に body に戻り無限ループ
+//     call void @VL_FATAL_MT(...)   ; stubbed to empty body on GPU
+//     br label %body                 ; problem: loops forever after stub
 //
 //   exit:
 //     ret void
 //
-// パッチ内容:
-//   1. fatal ブロックの br %body → br %exit  (loop abort)
-//   2. icmp のしきい値 100 → 0               (1 回目で即 fatal → 2 iterations で脱出)
+// Patches:
+//   1. fatal block: unconditional br to %body → br to %exit
+//   2. icmp threshold 100 → 0 (fatal after first body iteration; ≤2 iterations to exit)
 
 static BasicBlock *findLoopExit(BasicBlock *HeaderBB) {
-    // HeaderBB に戻る条件分岐を探し、もう一方のターゲットを exit とみなす
+    // Find a conditional branch that targets HeaderBB; the other successor is treated as exit.
     Function *F = HeaderBB->getParent();
     for (auto &BB : *F) {
         auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
@@ -92,7 +98,7 @@ static BasicBlock *findLoopExit(BasicBlock *HeaderBB) {
 
 struct VlPatchConvergencePass : public PassInfoMixin<VlPatchConvergencePass> {
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
-        // icmp ugt i32 %N, 100 を収集
+        // Collect icmp ugt i32 %N, 100
         SmallVector<ICmpInst *, 4> Candidates;
         for (auto &BB : F)
             for (auto &I : BB)
@@ -108,7 +114,7 @@ struct VlPatchConvergencePass : public PassInfoMixin<VlPatchConvergencePass> {
 
         bool Changed = false;
         for (auto *Cmp : Candidates) {
-            // icmp を使う条件分岐を探す (br i1 %ovf, %fatal, %body)
+            // Find the conditional br driven by this icmp (br i1 %ovf, %fatal, %body)
             BranchInst *GuardBr = nullptr;
             for (auto *U : Cmp->users())
                 if (auto *Br = dyn_cast<BranchInst>(U))
@@ -128,7 +134,7 @@ struct VlPatchConvergencePass : public PassInfoMixin<VlPatchConvergencePass> {
                 continue;
             }
 
-            // fatal ブロックの無条件分岐を body → exit にリダイレクト
+            // Redirect fatal block’s unconditional branch from %body to %exit
             auto *FatalTerm = FatalBB->getTerminator();
             if (auto *FatalBr = dyn_cast<BranchInst>(FatalTerm)) {
                 if (!FatalBr->isConditional()) {
@@ -139,7 +145,7 @@ struct VlPatchConvergencePass : public PassInfoMixin<VlPatchConvergencePass> {
                 }
             }
 
-            // しきい値 100 → 0 (1 回目の ico/act/nba 実行直後に脱出)
+            // Threshold 100 → 0 (exit soon after first ico/act/nba pass)
             Cmp->setOperand(1, ConstantInt::get(Cmp->getOperand(1)->getType(), 0));
             errs() << "[vl-patch-convergence] " << F.getName()
                    << ": threshold 100→0\n";
@@ -150,7 +156,7 @@ struct VlPatchConvergencePass : public PassInfoMixin<VlPatchConvergencePass> {
     }
 };
 
-// ─── Plugin 登録 ─────────────────────────────────────────────────────────────
+// ─── Plugin registration ────────────────────────────────────────────────────
 
 static PassPluginLibraryInfo getVlGpuPassesPluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "VlGpuPasses", LLVM_VERSION_STRING,

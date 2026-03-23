@@ -12,3 +12,4 @@ src/sim_accel/third_party/
 *.svg
 array_preload.*.tsv
 src/passes/VlGpuPasses.so
+src/passes/vlgpugen
