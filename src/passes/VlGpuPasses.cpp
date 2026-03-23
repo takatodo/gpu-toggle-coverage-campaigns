@@ -10,9 +10,9 @@
  * EH lowering is **not** implemented here: use LLVM’s built-in `lowerinvoke` before these passes
  * (see build_vl_gpu.py: lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence).
  *
- * Migration (Option A — current): Python gen_vl_gpu_kernel.py emits vl_batch_gpu.ll; this plugin
- * cleans IR; then opt -O3 / llc / ptxas. Option B (target): standalone vlgpugen with ModulePasses
- * for reachability, stubs, TBAA offset, and kernel injection — see README “C++ pass migration plan”.
+ * Upstream IR: **vlgpugen** (`--out`) emits `vl_batch_gpu.ll` (Phase 3). This plugin then lowers EH,
+ * strips x86-only metadata, and patches convergence loops before `opt -O3` / `llc` / `ptxas`.
+ * Legacy Python `gen_vl_gpu_kernel.py` remains for parity checks — see README.
  *
  * Usage:
  *   opt-18 --load-pass-plugin=./VlGpuPasses.so \

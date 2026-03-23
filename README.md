@@ -1,55 +1,51 @@
 # GPU Toggle Coverage Campaigns
 
-GPU-accelerated RTL toggle coverage collection across multiple open-source RISC-V and SoC designs, using [RTLMeter](https://github.com/verilator/rtlmeter) and a custom Verilator sim-accel backend.
+GPU-accelerated RTL toggle coverage collection across multiple open-source RISC-V and SoC designs, using [RTLMeter](https://github.com/verilator/rtlmeter) and LLVM/NVPTX toolchains where applicable.
 
 ## Architecture
 
-Primary backend: **`cuda_vl_ir`** — Verilator C++ → LLVM IR (no intermediate JSON).
+**Recommended path — stock Verilator → LLVM IR → cubin** (no sim-accel fork):
+
+The **Verilator sim-accel fork** was abandoned here: its lowered CUDA / IR pipeline **does not preserve full RTL semantics** (e.g. `always_ff` reset behavior, preload stubs), so GPU toggle numbers can diverge from RTL simulation. New work uses **normal `verilator --cc`** output, `clang++ -emit-llvm`, **`vlgpugen`**, and `opt`/`llc`/`ptxas` — see README section *Experimental: Standard Verilator → LLVM IR → GPU* and `src/tools/build_vl_gpu.py`.
 
 ```
 RTL (SystemVerilog)
     │
-    └─[Verilator sim-accel fork]─→ full_comb.cu + full_seq.cu  (Verilator C++)
+    └─[stock Verilator --cc --flatten]─→ V*.cpp
                                           │
-                                  clang++ -emit-llvm
+                                  clang++-18 -emit-llvm -O1
                                           │
-                                    LLVM IR (.ll)
+                                    llvm-link-18 → merged.ll
                                           │
-                                    llvm-link-18
+                                  vlgpugen --storage-size=N --out=vl_batch_gpu.ll
                                           │
-                                   merged.ll → llc-18 → PTX
+                                  opt-18 (+ VlGpuPasses.so) → opt -O3
                                           │
-                                        ptxas
+                                  llc-18 (nvptx64) → ptxas → cubin
                                           │
-                                       cubin  ← no JIT at runtime
-                                          │
-                                   GPU parallel simulation
+                                   GPU parallel simulation (AoS batched _eval)
                                           │
                                  toggle coverage bits
 ```
 
-### Backend selection
+### Backend selection (RTLMeter / legacy runners)
 
 | Backend | Description | Status |
 |---------|-------------|--------|
-| `cuda_vl_ir` | Verilator C++ → LLVM IR → ptxas cubin | **primary** (mismatch=20 known) |
-| `rocm_llvm` | Same pipeline, AMD GPU (AMDGCN) | auto-selected on WSL2/ROCm |
-| `cuda_circt_cubin` | CIRCT flow (program.json → chunked cubin) | legacy compat |
+| **Stock path** | `verilator --cc` → `vlgpugen` → `opt` → PTX/cubin | **recommended** for new GPU IR |
+| `cuda_vl_ir` | sim-accel `full_comb`/`full_seq` → LLVM → cubin (inside `verilator_sim_accel_bench`) | **legacy** — semantic mismatches vs RTL |
+| `rocm_llvm` | Same class of flow as `cuda_vl_ir`, AMD GPU | legacy / environment-specific |
+| `cuda_circt_cubin` | CIRCT flow (`program.json` → chunked cubin) | legacy compat |
 
-Known mismatch=20 breakdown (architectural limitations, not bugs):
-- `preload_word` stub: 2 variables (array preload not yet implemented)
-- `always_ff` conditional reset: ~18 variables (sim-accel limitation)
+Known issues on the **legacy `cuda_vl_ir` / sim-accel** path (not claimed for stock + `vlgpugen`):
 
-### Why Verilator C++ → LLVM IR
+- `preload_word` stub gaps, `always_ff` conditional reset handling, and related **GPU vs RTL toggle mismatches**.
 
-The previous flow (`program.json` → `program_json_to_llvm_ir.py`) split assigns into
-comb/seq domains before generating LLVM IR. However, `program.json` assigns are
-**interleaved across domains in global dependency order** — splitting them corrupts
-execution order and produces wrong values.
+### Why stock Verilator C++ → LLVM IR
 
-Verilator C++ (`full_comb.cu` + `full_seq.cu`) preserves this order correctly.
-`clang++ -emit-llvm` lowers it directly to LLVM IR. No `nvcc`/`hipcc` required —
-only `clang-18`, `llvm-link-18`, `llc-18`, and `ptxas`.
+The CIRCT / `program.json` path splits assigns into comb/seq domains before IR; `program.json` assigns are **interleaved in global dependency order**, so naive splitting **corrupts execution order**.
+
+**Stock Verilator** emits ordinary C++ (`--cc`) with consistent ordering. `clang++ -emit-llvm` lowers that to LLVM IR; **`vlgpugen`** extracts the GPU slice, stubs host/runtime calls, and emits the batch kernel. Downstream: `clang-18`, `llvm-link-18`, `llc-18`, `ptxas` (no `nvcc` for that compile chain).
 
 ## Repository Structure
 
@@ -57,7 +53,8 @@ only `clang-18`, `llvm-link-18`, `llc-18`, and `ptxas`.
 src/
 ├── runners/        Execution scripts (run_veer_*, run_xuantie_*, run_opentitan_*, ...)
 ├── scripts/        Shared utilities and test scripts
-├── sim_accel/      GPU kernel build pipeline (build_bench_bundle.py, etc.)
+├── hybrid/         Minimal CUDA driver stub (run_vl_hybrid) for stock-Verilator cubin
+├── sim_accel/      Legacy sim-accel / RTLMeter bench helpers (build_bench_bundle.py, etc.)
 ├── generators/     Artifact generation scripts
 ├── grpo/           GRPO policy scripts
 ├── rocm/           ROCm backend scripts
@@ -67,9 +64,12 @@ config/
 ├── rules/                  Toggle coverage rule definitions (input to runners)
 └── slice_launch_templates/ OpenTitan TLUL slice JSON templates
 
+docs/
+└── phase_b_ico_nba_spike.md  Phase B notes (ico/nba multi-kernel direction)
+
 third_party/
 ├── rtlmeter/   takatodo/rtlmeter fork, feature/gpu-cov (gpu_cov + gpu_cov_gate designs)
-├── verilator/  takatodo/verilator fork, feature/sim-accel-pr-clean-v2
+├── verilator/  optional: sim-accel fork (legacy RTLMeter bench only — not required for stock + vlgpugen)
 └── circt/      llvm/circt (reference)
 
 rtlmeter/       Python venv + requirements
@@ -79,15 +79,19 @@ output/         Generated research artifacts (gitignored)
 
 ## Quick Start
 
-`./quickstart.sh` initializes submodules, creates the RTLMeter venv, runs unit tests,
-and (if GPU + bench binary are present) runs a short VeeR-EL2 smoke job with `cuda_vl_ir`.
+`./quickstart.sh` initializes submodules, creates the RTLMeter venv, checks `nvcc`/ROCm, builds
+`src/passes` (`vlgpugen`, `VlGpuPasses.so`) when LLVM-18 is present, and runs unit tests.
+**Sim-accel VeeR smoke is off by default** (fork semantics unreliable); opt in with
+`--legacy-sim-accel-smoke` if you still have `verilator_sim_accel_bench`.
 
 ```bash
 git clone --recurse-submodules <this-repo-url>
 cd gpu-toggle-coverage-campaigns
 
-./quickstart.sh              # checks + optional smoke run
-./quickstart.sh --skip-run   # checks only (skip GPU smoke)
+./quickstart.sh                          # checks + passes build; no sim-accel smoke
+./quickstart.sh --legacy-sim-accel-smoke # optional: old VeeR cuda_vl_ir bench smoke
+./quickstart.sh --skip-run               # skip step 7 entirely (no messages / no legacy smoke)
+./quickstart.sh --skip-passes            # skip make -C src/passes
 ```
 
 ## Setup (manual)
@@ -99,21 +103,41 @@ git clone --recurse-submodules <this-repo-url>
 python3 -m venv rtlmeter/venv
 rtlmeter/venv/bin/pip install -r rtlmeter/python-requirements.txt
 
-# Build the Verilator sim-accel fork (or install a matching prebuilt binary).
-# Runners expect third_party/verilator/bin/verilator_sim_accel_bench
-# Example: cd third_party/verilator && ./configure && make -j"$(nproc)"
+# Stock Verilator GPU path: system Verilator (or any --cc output), LLVM 18, CUDA ptxas.
+# See: python3 src/tools/build_vl_gpu.py <verilator-cc-dir>
+#
+# Legacy only: sim-accel fork + verilator_sim_accel_bench for old RTLMeter cuda_vl_ir runners.
 ```
 
 ## Running
 
 ```bash
-# VeeR family (EL2/EH1/EH2) — outputs to work/
+# Stock Verilator → cubin (recommended)
+python3 src/tools/build_vl_gpu.py <path-to-verilator--cc-output-dir> [--sm sm_89]
+# Phase B: print ___ico_sequent / ___nba_* reachability after merged.ll, then continue to cubin:
+#   python3 src/tools/build_vl_gpu.py <mdir> --analyze-phases
+# Headers should match the Verilator that generated mdir: default include is third_party/verilator/include;
+# set VERILATOR_ROOT or VL_INCLUDE to override (see build_vl_gpu.verilator_include_dir). Emit-LLVM uses -std=c++20.
+
+# Load cubin + launch vl_eval_batch_gpu (Phase D skeleton)
+make -C src/hybrid
+python3 src/tools/run_vl_hybrid.py --mdir <same-verilator-cc-dir> [--nstates N] [--steps S] [--patch off:byte ...]
+
+# Same path as a quickstart-style script (checks, build_vl_gpu, hybrid binary, run + GPU timing)
+./quickstart_hybrid.sh --mdir <same-verilator-cc-dir> [--steps S] [--patch off:byte ...]
+# With no args, default --mdir is work/vl_ir_exp/socket_m1_vl: the script mkdirs it if missing and runs
+# src/tools/bootstrap_hybrid_socket_m1_cc.py (stock Verilator --cc) when *_classes.mk is absent. Use --no-bootstrap to skip.
+# After a full run, ./quickstart_hybrid.sh --fast reuses cubin + skips submodule/git and make when up to date.
+# ./quickstart_hybrid.sh --analyze-phases forwards Phase B reporting into build_vl_gpu.py.
+# Step 7 defaults to --nstates 256 (not 4096) to keep GPU launch light; use --nstates 4096 or --lite (64) as needed.
+
+# VeeR family (legacy RTLMeter + sim-accel backends) — outputs to work/
 python3 src/runners/run_veer_family_gpu_toggle_validation.py
 
 # XuanTie family
 python3 src/runners/run_xuantie_family_gpu_toggle_validation.py
 
-# Single baseline run (cuda_vl_ir by default)
+# Single baseline (defaults to cuda_vl_ir — legacy sim-accel bench)
 python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
     --case VeeR-EL2:gpu_cov_gate:hello \
     --build-dir work/VeeR-EL2/gpu_cov_gate \
@@ -151,14 +175,14 @@ RTL (SystemVerilog)
                                               │ (multiple .ll)
                                       llvm-link-18 → merged.ll
                                               │
-                                  gen_vl_gpu_kernel.py <merged.ll> <storage_size>
-                                    · extract only functions reachable from _eval
-                                    · replace VL_FATAL_MT etc. with no-op stubs
-                                    · set NVPTX target metadata
-                                    · add AoS-strided kernel
-                                      (thread i → _eval(base + i * storage_size))
+                                  vlgpugen merged.ll --storage-size=N --out=vl_batch_gpu.ll
+                                    · reachable from _eval, runtime vs GPU split
+                                    · stub externs + drop host-only globals
+                                    · NVPTX datalayout/triple, @fake_syms_buf, AoS kernel
                                               │
-                                      opt-18 -O3 → llc-18 -march=nvptx64 → ptxas
+                                  opt-18 (lowerinvoke + VlGpuPasses.so) → opt -O3
+                                              │
+                                      llc-18 -march=nvptx64 → ptxas
                                               │
                                            cubin
 ```
@@ -183,8 +207,8 @@ stays true and the convergence loop never terminates.
 2. **Single-pass threshold:** `icmp ugt i32 %N, 100` → `icmp ugt i32 %N, 0`
    (fatal after the first body iteration → at most two iterations to leave the loop).
 
-3. **VerilatedSyms / vlSymsp:** still handled in **`gen_vl_gpu_kernel.py`**: `is_runtime()` forces some
-   reached functions to stubs; `detect_vlsyms_offset()` + `@fake_syms_buf` avoid NULL dereferences on GPU.
+3. **VerilatedSyms / vlSymsp:** handled in **`vlgpugen`** (generation mode): TBAA regex finds the field
+   offset; `@fake_syms_buf` is stored into each state’s `vlSymsp` slot before calling `_eval`.
 
 **Comparison vs. CIRCT path:**
 
@@ -198,10 +222,10 @@ stays true and the convergence loop never terminates.
 | Extern stubs | not required | `VL_FATAL_MT` + VerilatedSyms-related |
 
 **Files:**
-- `src/tools/gen_vl_gpu_kernel.py` — merged.ll → NVPTX GPU kernel generator (reachability, stubs, kernel IR text)
-- `src/tools/build_vl_gpu.py` — Verilator `--cc` output dir → cubin build driver (`opt` + `VlGpuPasses.so`)
+- `src/passes/vlgpugen.cpp` — **production** merged.ll → `vl_batch_gpu.ll` (analysis or `--out` generation)
+- `src/tools/build_vl_gpu.py` — Verilator `--cc` output dir → cubin (`vlgpugen` + `opt` + `VlGpuPasses.so`)
 - `src/passes/VlGpuPasses.cpp` — `vl-strip-x86-attrs`, `vl-patch-convergence` (plugin `.so`)
-- `src/passes/vlgpugen.cpp` — standalone analyzer toward Option B (`vlgpugen` binary, same `make`)
+- `src/tools/gen_vl_gpu_kernel.py` — legacy Python path (reference / parity checks vs `vlgpugen`)
 - `work/vl_ir_exp/loopback_vl/` — tlul_request_loopback: Verilator C++ / LLVM IR / cubin
 - `work/vl_ir_exp/socket_m1_vl/` — tlul_socket_m1: Verilator C++ / LLVM IR / cubin
 - `work/vl_ir_exp/bench_vl_sweep.cu` — NSTATES sweep benchmark (`STORAGE_SIZE` macro)
@@ -210,60 +234,49 @@ stays true and the convergence loop never terminates.
 
 | Stage | Location | Responsibility |
 |-------|----------|----------------|
+| Reachability, runtime split, stubs, host globals, kernel, TBAA offset | **`vlgpugen`** (`--out`) | Replaces former `gen_vl_gpu_kernel.py` pipeline (Phase 3) |
 | EH lowering | `opt -passes=lowerinvoke` | `invoke` → `call` (LLVM built-in) |
 | Strip x86 / convergence CFG | `VlGpuPasses.so` | `vl-strip-x86-attrs`, `vl-patch-convergence` |
-| Reachability, stubs, kernel, TBAA scrape | Python | `gen_vl_gpu_kernel.py` + helpers below |
 
-**Python modules (`src/tools/`):**
+**Reference Python (parity / experiments only):**
 
 | File | Role |
 |------|------|
-| `llvm_ir_parse.py` | IR text → dict/set (pure); `reachable_from`, `external_calls` |
-| `llvm_stub_gen.py` | `make_no_op_stub` — extern → empty `define` bodies (text) |
-| `vl_runtime_filter.py` | `is_runtime()`, `detect_vlsyms_offset()` |
+| `llvm_ir_parse.py` | Text IR helpers used by `gen_vl_gpu_kernel.py` |
+| `llvm_stub_gen.py` | Stub text generation (Python path) |
+| `vl_runtime_filter.py` | Same heuristics as `vlgpugen`’s `isRuntimeFunction` |
 
-There is **no** `llvm_ir_patch.py`; lowering and CFG/attribute fixes run in `opt`, not regex on `.ll`.
+There is **no** `llvm_ir_patch.py`; lowering and CFG/attribute fixes run in `opt`, not ad-hoc regex passes on `.ll`.
 
 ### C++ pass migration plan
 
-**Option A — `opt` plugin + Python orchestrator (current direction):**
+**Option A — `opt` plugin + Python orchestrator (superseded for stock-Verilator GPU IR):** was used while
+stub/kernel emission lived in `gen_vl_gpu_kernel.py`. **Production now uses Option B** (`vlgpugen`) for
+that stage; `opt` + `VlGpuPasses.so` are unchanged downstream.
 
-```
-merged.ll
-  → python: gen_vl_gpu_kernel.py → vl_batch_gpu.ll (subset + stubs + kernel)
-  → opt --load-pass-plugin=VlGpuPasses.so -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence"
-  → opt -O3 → llc → ptxas → cubin
-```
-
-Python keeps: reachability + `is_runtime`, stub text generation, `detect_vlsyms_offset`, kernel injection.
-Good for incremental migration and experiments.
-
-**Option B — standalone `vlgpugen` (target):** single binary using the LLVM API; no regex on IR text.
-Higher implementation cost (CMake or robust Makefile, link against `libLLVM`).
+**Option B — `vlgpugen` (production for merged.ll → `vl_batch_gpu.ll`):** LLVM API + typed IR transforms;
+host-global cleanup and kernel injection live here. Build: `make -C src/passes` (links `libLLVM-18`).
 
 **Option A vs. Option B:**
 
 | | **Option A** (`opt` plugin + Python) | **Option B** (`vlgpugen`) |
 |---|--------------------------------------|---------------------------|
 | **IR representation** | Text `.ll`; Python regex/splicing + `opt` on the same file | In-memory `Module`; no string IR edits |
-| **Entry commands** | `gen_vl_gpu_kernel.py` → `opt` (plugin + built-ins) → `opt -O3` → `llc` → `ptxas` | `vlgpugen merged.ll …` → `opt` → `llc` → `ptxas` (or embedded passes) |
-| **Reachability / stubs / kernel** | Python (`llvm_ir_parse`, `llvm_stub_gen`, `vl_runtime_filter`) | C++ `ModulePass`es (CallGraph, stub inject, kernel inject) |
-| **Build** | Small plugin `.so` (`make -C src/passes`) + `python3` | Link `libLLVM` (larger link line; CMake optional) |
-| **Pros** | Fast iteration; keeps experimental scripts; clear split: “emit kernel IR” vs “clean for NVPTX” | No regex fragility; LLVM upgrades touch typed API; single artifact to ship |
-| **Cons** | Python/C++ boundary; TBAA/stub logic duplicated in spirit with IR text | Up-front cost; must reimplement what Python already does |
-| **Fit** | **Current repo** (Phase 1–2 done here) | **Target** when stub/kernel/TBAA move to C++ (Phase 3) |
+| **Entry commands** | `gen_vl_gpu_kernel.py` → `opt` … → `ptxas` (reference only) | `vlgpugen … --out=vl_batch_gpu.ll` → `opt` (plugin + built-ins) → `opt -O3` → `llc` → `ptxas` |
+| **Reachability / stubs / kernel** | Python text IR + helpers | **`vlgpugen`** (LLVM `Module` API: BFS, stubs, globals, kernel) |
+| **Build** | `python3` + optional scripts | `make -C src/passes` → `vlgpugen` + `VlGpuPasses.so` (links `libLLVM`) |
+| **Pros** | Easy to diff against C++ for parity | Typed IR; production path for `build_vl_gpu.py` |
+| **Cons** | Not used in default cubin build anymore | LLVM major-version upgrades require rebuild + occasional API tweaks |
+| **Fit** | Legacy / diff vs `vlgpugen` | **Production** stock-Verilator path (Phase 3 complete) |
 
-**Python logic → LLVM mapping (target end state for B):**
+**Logic → implementation (after Phase 3):**
 
-| Logic today | Kind | LLVM / tool |
-|-------------|------|-------------|
-| (done) EH | strip exception handling | `-lowerinvoke` |
-| (done) x86 noise | attrs / comdat / personality | `VlStripX86AttrsPass` |
-| (done) convergence loop | CFG | `VlPatchConvergencePass` |
-| `make_no_op_stub` | extern → define | custom `ModulePass` |
-| `reachable_from` + `is_runtime` | filter functions | custom `ModulePass` (CallGraph) |
-| `detect_vlsyms_offset` | TBAA | `ModulePass` or keep in Python |
-| `vl_eval_batch_gpu` | inject kernel | custom `ModulePass` |
+| Logic | Kind | Where |
+|-------|------|--------|
+| EH | strip exception handling | `-lowerinvoke` (`opt`) |
+| x86 noise | attrs / comdat / personality | `VlStripX86AttrsPass` |
+| convergence loop | CFG | `VlPatchConvergencePass` |
+| stubs + reachable + kernel + TBAA offset + host globals | IR rewrite | **`vlgpugen`** (`--out`) |
 
 **Phased rollout:**
 
@@ -271,32 +284,37 @@ Higher implementation cost (CMake or robust Makefile, link against `libLLVM`).
 |-------|--------|------|
 | 1 | **done** | `lowerinvoke` only via `opt` in `build_vl_gpu.py` (no Python `lower_invoke_to_call`) |
 | 2 | **done** | `VlStripX86Attrs` + `VlPatchConvergence` in `src/passes/VlGpuPasses.cpp` + `src/passes/Makefile` |
-| 3 | **in progress** | `vlgpugen` (`make -C src/passes`): analysis tool (eval, direct-call reachability, runtime vs GPU, TBAA offset). Stub/kernel IR emission still in `gen_vl_gpu_kernel.py`. |
+| 3 | **done** | `vlgpugen`: full generation (stubs, host-global removal, kernel, NVPTX module). `build_vl_gpu.py` invokes `vlgpugen` instead of `gen_vl_gpu_kernel.py`. |
 
-**Production pipeline (today):**
+**Production pipeline (current):**
 
 ```
 merged.ll
-    ↓ gen_vl_gpu_kernel.py → vl_batch_gpu.ll
+    ↓ vlgpugen --storage-size=N --out=vl_batch_gpu.ll
     ↓ opt --load-pass-plugin=VlGpuPasses.so
           -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence"
     ↓ opt -O3 | llc -march=nvptx64 | ptxas
     ↓ cubin
 ```
 
-**Optional — compare with Python (`vlgpugen` analysis only):**
+**Verified (representative tlul slice build):** `make -C src/passes` succeeds; analysis reports eval + reachable
+functions (e.g. **14** reachable, **11** GPU / **3** runtime), **vlSymsp** offset **2000** bytes; generation
+stubs **6** extern calls, removes **6** host-only globals, emits `vl_batch_gpu.ll`; end-to-end cubin **~71 KiB**,
+matching the previous Python generator output.
+
+**vlgpugen usage:**
 
 ```bash
 make -C src/passes
-./src/passes/vlgpugen path/to/merged.ll --storage-size=2048
+# analysis only (no --out): summary to stdout
+./src/passes/vlgpugen path/to/merged.ll
+# generation mode
+./src/passes/vlgpugen path/to/merged.ll --storage-size=N --out=vl_batch_gpu.ll
 ```
-
-Same reachability / runtime / TBAA heuristics as the Python path; does not emit `vl_batch_gpu.ll` yet.
 
 **LLVM version bumps:**
 
-After the Python migration, only four constants in `build_vl_gpu.py` need updating (`CLANG` / `LLVMLINK` / `OPT` / `LLC`).
-Before migration, watch:
+Update the tool paths in `build_vl_gpu.py` (`CLANG` / `LLVMLINK` / `OPT` / `LLC`) and rebuild `vlgpugen` / `VlGpuPasses.so` against the same LLVM. When bumping LLVM, also watch:
 - `_clean_param_type` attribute lists — new LLVM attrs can break stub parsing
 - `detect_vlsyms_offset` `"any pointer"` pattern — TBAA shape changes can mis-detect offsets
 - `NVPTX_DATALAYOUT` — must match the new LLVM version’s expectations
@@ -328,7 +346,7 @@ verilator --cc --flatten
     │   GPU: ico_sequent / nba_sequent
     │        (single pointer arg, no unsafe extern side effects)
     │       ↓
-    │   gen_vl_gpu_kernel.py → opt/llc/ptxas → cubin
+    │   vlgpugen → opt/llc/ptxas → cubin
     │
     └─ CPU: init / clk drive / collect
             ↓
@@ -336,6 +354,37 @@ verilator --cc --flatten
             ↓
     Hybrid runtime (load host binary + cubin)
 ```
+
+**Roadmap — steps from today’s pipeline to hybrid runtime**
+
+| Phase | What exists / what to build | Outcome |
+|-------|-----------------------------|---------|
+| **A — done** | `build_vl_gpu.py`: Verilator `--cc` → `.ll` → **`vlgpugen`** → `opt` + `VlGpuPasses.so` → cubin | Single **batch `_eval`** kernel over many states (AoS); runtime/host calls stubbed; `VlPatchConvergence` for `--no-timing` TB loops |
+| **B** | **Timestep / phase fidelity:** align GPU execution with RTL time steps (multi-`eval`, ico/nba ordering, or explicit sched) where one batched `_eval` is insufficient | Reduces semantic gap vs event-driven RTL sim; may require IR slicing or multi-kernel launch |
+| **C** | **CPU slice:** compile non-kernel functions with normal `clang++` (init, monitors, DPI hooks, assertion bodies) into a **host** binary; define a narrow ABI (storage layout, syms, toggle bitmap) | Host does constructors, reset sequencing, optional single-step debug path |
+| **D** | **Hybrid driver:** one process loads **host .so/.exe + cubin**; drives `clk`/`rst` on CPU, copies or maps state, launches GPU kernels per batch, **pulls toggle bits** back | End-to-end toggle campaign without sim-accel; replaces ad-hoc `bench_vl_sweep.cu`-style harnesses |
+| **E** | **Automatic GPU/CPU classification:** static analysis on Verilator IR (or LLVM) to mark safe GPU regions vs must-stay-on-host (I/O, time, `$display`) | Scales beyond hand-tuned `is_runtime` lists |
+
+**Phase D (minimal, implemented):** after `build_vl_gpu.py`, `vl_batch_gpu.meta.json` records `cubin`, `storage_size`, `sm`, `schema_version`. Build and run the CUDA Driver stub:
+
+```bash
+make -C src/hybrid    # produces src/hybrid/run_vl_hybrid (needs CUDA headers + libcuda)
+python3 src/tools/run_vl_hybrid.py --mdir <verilator-cc-dir> [--nstates 4096]
+```
+
+This loads `vl_batch_gpu.cubin`, zero-fills device storage (`nstates * storage_size`), and launches `@vl_eval_batch_gpu` (grid/block layout matches the LLVM kernel). Use **`--steps`** and **`--patch global_offset:byte`** on `run_vl_hybrid.py` to repeat launches with host-injected bytes (minimal CPU time axis). No full CPU-side Verilator link yet — see `src/hybrid/host_abi.h` and `make host_stub`.
+
+**Per-launch cost:** one launch = one `_eval` per `nstates` slot; time ~ **(_eval work) × nstates × steps** (design-dependent, not “one cycle”). Lighten with smaller `--cc` / TB, lower `--nstates` / `--steps`, or `--lite`; profile with `nsys` if needed. **Shorter `_eval` IR:** `build_vl_gpu.py --clang-O O3` (or `quickstart_hybrid.sh --fast-sim`) re-emits `.ll` with heavier clang opt; rebuild with `--force` or change opt level (tracked via `mdir/.vl_gpu_clang_opt`).
+
+**WSL2:** If `nvidia-smi` works but `run_vl_hybrid` fails with CUDA error 100 (no device), prepend the host driver library path: `export LD_LIBRARY_PATH=/usr/lib/wsl/lib:$LD_LIBRARY_PATH` — `run_vl_hybrid.py` and `quickstart_hybrid.sh` do this automatically when `/usr/lib/wsl/lib/libcuda.so.1` exists.
+
+**Wall clock:** By default `run_vl_hybrid` uses **one** `cuCtxSynchronize()` after all `--steps` (fewer host–GPU round trips). For per-step sync (old behavior), set `RUN_VL_HYBRID_SYNC_EACH_STEP=1`. For a one-off untimed launch to hide first-kernel latency, set `RUN_VL_HYBRID_WARMUP=1`.
+
+**Phase B spike:** `vlgpugen --analyze-phases <merged.ll>` reports whether `___ico_sequent` / `___nba_comb` / `___nba_sequent` appear reachable from `_eval`. See [docs/phase_b_ico_nba_spike.md](docs/phase_b_ico_nba_spike.md).
+
+**Phase E prototype:** `vlgpugen` uses LLVM **CallGraph**-based callee hints merged with `isRuntimeFunction` (see `classifyRuntimeFunctions` in `vlgpugen.cpp`).
+
+Dependencies: **B** may feed into **C** (what must stay on host). **D** can start with a minimal host that only drives clocks and collects toggles before full assertion parity.
 
 **Benefits:**
 
@@ -349,14 +398,12 @@ verilator --cc --flatten
 
 ## Known Limitations
 
-- **mismatch=20 on VeeR-EL2** (`cuda_vl_ir`): 2 vars from unimplemented `preload_word` stub,
-  ~18 vars from `always_ff` conditional reset semantics (sim-accel architectural limit).
-  RTL simulation passes correctly; GPU toggle counts are accurate for the remaining signals.
+- **Legacy `cuda_vl_ir` / sim-accel fork:** RTL vs GPU toggle mismatch (e.g. `preload_word`, `always_ff`
+  conditional reset) — **this is why sim-accel is not the recommended path**; use stock Verilator + `vlgpugen`.
 
 ## Prerequisites
 
-- CUDA-capable GPU (sm_80+) or ROCm GPU
+- CUDA-capable GPU (sm_80+) or ROCm GPU (for cubin execution and `ptxas` / drivers)
 - Python 3.10+
-- LLVM 18: `clang-18`, `llvm-link-18`, `llc-18`
-- `ptxas` (from CUDA toolkit)
-- `third_party/verilator/bin/verilator_sim_accel_bench` (sim-accel fork build output)
+- **Stock GPU IR path:** LLVM 18 (`clang++-18`, `llvm-link-18`, `opt-18`, `llc-18`), `ptxas`, `make -C src/passes`
+- **Legacy RTLMeter bench:** `third_party/verilator/bin/verilator_sim_accel_bench` (sim-accel fork) — optional
