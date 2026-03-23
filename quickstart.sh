@@ -66,23 +66,15 @@ GPU_OK=1
 if [ -x "$BENCH" ]; then
   ok "verilator_sim_accel_bench found"
 else
-  # third_party/verilator is the upstream fork (no sim-accel).
-  # Check common locations for a sim-accel build.
-  FALLBACK_BENCH=""
-  for candidate in \
-    "$HOME/GEM_try/verilator/bin/verilator_sim_accel_bench" \
-    "$HOME/verilator/bin/verilator_sim_accel_bench"; do
-    if [ -x "$candidate" ]; then
-      FALLBACK_BENCH="$candidate"
-      break
-    fi
-  done
-  if [ -n "$FALLBACK_BENCH" ]; then
-    ok "verilator_sim_accel_bench found at $FALLBACK_BENCH (sim-accel fork)"
+  # Check alternate install location (sim-accel build outside repo).
+  FALLBACK_BENCH="$HOME/verilator/bin/verilator_sim_accel_bench"
+  if [ -x "$FALLBACK_BENCH" ]; then
+    ok "verilator_sim_accel_bench found at $FALLBACK_BENCH"
     BENCH="$FALLBACK_BENCH"
   else
     warn "verilator_sim_accel_bench not found"
-    warn "build the sim-accel Verilator fork and install to third_party/verilator/bin/"
+    warn "Build third_party/verilator (sim-accel fork) and install:"
+    warn "  cd third_party/verilator && autoconf && ./configure && make -j\$(nproc)"
     GPU_OK=0
   fi
 fi
