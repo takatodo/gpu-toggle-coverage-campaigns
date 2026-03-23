@@ -109,19 +109,35 @@ elif [ "$GPU_OK" -eq 0 ]; then
   echo -e "${GREEN}Environment ready.${RESET} Re-run without --skip-run once GPU/bench is set up."
 else
   WORK_DIR="work/quickstart/VeeR-EL2/gpu_cov_gate"
-  JSON_OUT="$WORK_DIR/baseline.json"
   mkdir -p "$WORK_DIR"
   echo "  output → $WORK_DIR"
-  # Capture JSON from stdout (bench_kernel reuse writes to stdout, not file).
-  # Skip pre-GPU gate — CPU RTL sim runs ~3 min and is not needed here.
-  echo
+  RUNNER_COMMON=(
+    --case VeeR-EL2:gpu_cov_gate:hello
+    --build-dir "$WORK_DIR"
+    --nstates 256
+    --gpu-reps 1
+    --skip-cpu-reference-build
+    --pre-gpu-gate never
+    --gpu-execution-backend cuda_vl_ir
+  )
+
+  # ── 6a. Build phase: compile Verilator C++ → LLVM IR → PTX → cubin ─────────
+  # cuda_vl_ir: Verilator emits full_comb.cu + full_seq.cu, compiled via
+  # clang++ -emit-llvm, merged with llvm-link, assembled with llc, then ptxas
+  # produces a cubin (no runtime JIT penalty).
+  # Only rebuild when the vl_ir cubin is absent (first run or after clean).
+  if [ ! -f "$WORK_DIR/vl_ir/kernel_generated.vl_ir.cubin" ]; then
+    echo "  Building cuda_vl_ir bench_kernel (first time, ~3 min) ..."
+    python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
+      "${RUNNER_COMMON[@]}" \
+      --no-reuse-bench-kernel-if-present \
+      2>/dev/null >/dev/null || true
+    echo
+  fi
+
+  # ── 6b. Measurement run ──────────────────────────────────────────────────────
   GPU_JSON=$(python3 src/runners/run_rtlmeter_gpu_toggle_baseline.py \
-    --case VeeR-EL2:gpu_cov_gate:hello \
-    --build-dir "$WORK_DIR" \
-    --nstates 256 \
-    --gpu-reps 1 \
-    --skip-cpu-reference-build \
-    --pre-gpu-gate never \
+    "${RUNNER_COMMON[@]}" \
     2>/dev/null | grep '^{' | tail -1)
   echo
   if [ -n "$GPU_JSON" ]; then

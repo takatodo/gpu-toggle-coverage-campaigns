@@ -3422,6 +3422,15 @@ def _run_bundle_backend(
                         ]
                     )
                 build_cmd.extend(["--execution-backend", execution_backend])
+                if execution_backend in ("cuda_clang_ir", "cuda_vl_ir"):
+                    if getattr(ns, "clang", ""):
+                        build_cmd.extend(["--clang", ns.clang])
+                    if getattr(ns, "llc", ""):
+                        build_cmd.extend(["--llc", ns.llc])
+                    if getattr(ns, "llvm_link", ""):
+                        build_cmd.extend(["--llvm-link", ns.llvm_link])
+                    if getattr(ns, "cuda_arch", ""):
+                        build_cmd.extend(["--cuda-arch", ns.cuda_arch])
                 bundle_dir.mkdir(parents=True, exist_ok=True)
                 for attempt in range(3):
                     try:
@@ -3541,8 +3550,28 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--launch-backend", choices=("auto", "source", "circt-cubin"), default="auto")
     parser.add_argument(
         "--gpu-execution-backend",
-        choices=("auto", "cuda_source", "cuda_circt_cubin", "rocm_llvm"),
+        choices=("auto", "cuda_source", "cuda_circt_cubin", "cuda_clang_ir", "cuda_vl_ir", "rocm_llvm"),
         default="auto",
+    )
+    parser.add_argument(
+        "--clang",
+        default="",
+        help="clang executable forwarded to build_bench_bundle.py for cuda_clang_ir/cuda_vl_ir",
+    )
+    parser.add_argument(
+        "--llc",
+        default="",
+        help="llc executable forwarded to build_bench_bundle.py for cuda_clang_ir/cuda_vl_ir",
+    )
+    parser.add_argument(
+        "--llvm-link",
+        default="",
+        help="llvm-link executable forwarded to build_bench_bundle.py for cuda_vl_ir",
+    )
+    parser.add_argument(
+        "--cuda-arch",
+        default="",
+        help="CUDA GPU architecture forwarded to build_bench_bundle.py, e.g. sm_86",
     )
     parser.add_argument(
         "--gpu-selection-policy",

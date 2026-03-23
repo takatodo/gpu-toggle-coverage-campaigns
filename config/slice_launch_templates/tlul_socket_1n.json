@@ -94,7 +94,7 @@
     "campaign_gpu_nstates": 256,
     "campaign_sequential_rep_graph_mode": "always",
     "cases": 25000,
-    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/tlul_socket_1n_coverage_regions.json",
+    "coverage_manifest_path": "third_party/rtlmeter/designs/OpenTitan/tests/tlul_socket_1n_coverage_regions.json",
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_socket_1n_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
@@ -148,7 +148,7 @@
   "slice_name": "tlul_socket_1n",
   "static_features": {
     "base_outputs_ready": true,
-    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/tlul_socket_1n_coverage_regions.json",
+    "coverage_manifest_path": "third_party/rtlmeter/designs/OpenTitan/tests/tlul_socket_1n_coverage_regions.json",
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_socket_1n_gpu_cov_tb.sv",
     "exclusive_word_count": 18,
     "exclusive_word_fraction": 1.0,

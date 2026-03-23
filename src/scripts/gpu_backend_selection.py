@@ -55,7 +55,7 @@ def resolve_gpu_execution_backend(
         selected = "rocm_llvm"
         reason = "selection_policy_rocm_only"
     elif selection_policy_normalized == "cuda_only":
-        selected = "cuda_circt_cubin" if launch_backend_normalized == "circt-cubin" else "cuda_source"
+        selected = "cuda_circt_cubin" if launch_backend_normalized == "circt-cubin" else "cuda_vl_ir"
         reason = "selection_policy_cuda_only"
     elif detected_gpu_backend == "rocm_wsl_bridge":
         selected = "rocm_llvm"
@@ -72,14 +72,14 @@ def resolve_gpu_execution_backend(
             else "auto_selected_from_circt_cubin_launch_backend"
         )
     else:
-        selected = "cuda_source"
+        selected = "cuda_vl_ir"
         reason = (
             "selection_policy_prefer_cuda"
             if selection_policy_normalized == "prefer_cuda"
-            else "auto_selected_from_cuda_source_launch_backend"
+            else "auto_selected_from_cuda_vl_ir_launch_backend"
         )
 
-    supported_in_current_runner = selected in {"cuda_source", "cuda_circt_cubin", "rocm_llvm"}
+    supported_in_current_runner = selected in {"cuda_source", "cuda_circt_cubin", "cuda_clang_ir", "cuda_vl_ir", "rocm_llvm"}
     portability_status = (
         "current_runner_supported"
         if supported_in_current_runner

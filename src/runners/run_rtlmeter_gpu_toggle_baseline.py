@@ -1897,6 +1897,9 @@ def _bench_command(
         cmd.extend(["--sequential-steps", str(sequential_steps)])
     if execution_backend == "rocm_llvm":
         cmd.extend(["--rocm-launch-mode", str(getattr(ns, "rocm_launch_mode", "auto") or "auto")])
+        gfx_arch = str(getattr(ns, "gfx_arch", "") or "")
+        if gfx_arch:
+            cmd.extend(["--gfx-arch", gfx_arch])
     cmd.extend(native_block_args)
     for arg in getattr(ns, "bench_extra_args", []) or []:
         cmd.append(str(arg))
@@ -2411,7 +2414,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--summary-mode", choices=("full", "prefilter"), default="full")
     parser.add_argument(
         "--gpu-execution-backend",
-        choices=("auto", "cuda_source", "cuda_circt_cubin", "rocm_llvm"),
+        choices=("auto", "cuda_source", "cuda_circt_cubin", "cuda_clang_ir", "cuda_vl_ir", "rocm_llvm"),
         default="auto",
     )
     parser.add_argument(
@@ -2423,6 +2426,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--rocm-launch-mode",
         choices=("auto", "source-bridge", "native-hsaco"),
         default="auto",
+    )
+    parser.add_argument(
+        "--gfx-arch",
+        default="",
+        help="GFX architecture for ROCm bridge compilation (e.g. gfx1201). "
+        "Also sets HSA_OVERRIDE_GFX_VERSION at runtime. "
+        "Derived from HSA_OVERRIDE_GFX_VERSION env var when not specified.",
     )
     parser.add_argument(
         "--bench-extra-arg",
@@ -2592,7 +2602,7 @@ def main(argv: list[str]) -> int:
         gpu_reps=gpu_reps,
         cpu_reps=cpu_reps,
         sequential_steps=sequential_steps,
-        execution_backend=str(gpu_execution_backend.get("selected") or "cuda_source"),
+        execution_backend=str(gpu_execution_backend.get("selected") or "cuda_vl_ir"),
     )
     bench_runtime_mode = "wrapper"
     bench_runtime_reused = False
@@ -2633,7 +2643,7 @@ def main(argv: list[str]) -> int:
             skip_cpu_reference_build=bool(ns.skip_cpu_reference_build),
             sim_args=list(execute_runtime_inputs.get("sim_args") or []),
             bench_extra_args=list(getattr(ns, "bench_extra_args", []) or []),
-            execution_backend=str(gpu_execution_backend.get("selected") or "cuda_source"),
+            execution_backend=str(gpu_execution_backend.get("selected") or "cuda_vl_ir"),
             rocm_launch_mode=str(getattr(ns, "rocm_launch_mode", "auto") or "auto"),
         )
         bench_runtime_mode = "direct_bench_kernel"
@@ -2643,6 +2653,13 @@ def main(argv: list[str]) -> int:
     env.setdefault("VERILATOR_ROOT", str(ROOT_DIR / "third_party/verilator"))
     env["SIM_ACCEL_COMPILE_FULL_ALL_ONLY"] = "1" if ns.compile_full_all_only else "0"
     env["SIM_ACCEL_ENABLE_FULL_KERNEL_FUSER"] = "1" if ns.compile_full_all_only else "0"
+    if str(gpu_execution_backend.get("selected") or "") == "rocm_llvm":
+        _gfx = str(getattr(ns, "gfx_arch", "") or "")
+        if _gfx:
+            import re as _re
+            _m = _re.fullmatch(r"gfx(\d+)(\d)(\d)", _gfx)
+            if _m:
+                env.setdefault("HSA_OVERRIDE_GFX_VERSION", f"{_m.group(1)}.{_m.group(2)}.{_m.group(3)}")
     with stdout_log.open("w", encoding="utf-8") as handle:
         proc = subprocess.run(
             runtime_cmd,

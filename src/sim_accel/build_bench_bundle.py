@@ -13,10 +13,12 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 BUNDLE_CONFIG_NAME = "sim_accel_bundle_config.json"
-EXECUTION_BACKENDS = ("auto", "cuda_source", "cuda_circt_cubin", "rocm_llvm")
+EXECUTION_BACKENDS = ("auto", "cuda_source", "cuda_circt_cubin", "cuda_clang_ir", "cuda_vl_ir", "program_json_ir", "rocm_llvm")
+_GPU_BINARY_ENV_VAR = "SIM_ACCEL_GPU_BINARY_PATH"
 DEFAULT_ROCM_HIPIFY_CACHE_ROOT = Path(
     os.getenv("SIM_ACCEL_ROCM_HIPIFY_CACHE_ROOT", "/tmp/sim_accel_rocm_hipify_cache")
 )
@@ -38,6 +40,27 @@ def _default_gpu_binary_metadata(*, launch_backend: str, execution_backend: str)
         return {
             "gpu_binary_kind": "hsaco",
             "gpu_binary_relpath": "kernel_generated.full_all.hsaco",
+            "gpu_binary_env_var": "SIM_ACCEL_GPU_BINARY_PATH",
+            "gpu_binary_required": True,
+        }
+    if execution_backend == "cuda_clang_ir":
+        return {
+            "gpu_binary_kind": "ptx",
+            "gpu_binary_relpath": "kernel_generated.full_all.clang_ir.ptx",
+            "gpu_binary_env_var": "SIM_ACCEL_GPU_BINARY_PATH",
+            "gpu_binary_required": True,
+        }
+    if execution_backend == "cuda_vl_ir":
+        return {
+            "gpu_binary_kind": "cubin",
+            "gpu_binary_relpath": "kernel_generated.vl_ir.cubin",
+            "gpu_binary_env_var": "SIM_ACCEL_GPU_BINARY_PATH",
+            "gpu_binary_required": True,
+        }
+    if execution_backend == "program_json_ir":
+        return {
+            "gpu_binary_kind": "cubin",
+            "gpu_binary_relpath": "kernel_generated.pj_ir.cubin",
             "gpu_binary_env_var": "SIM_ACCEL_GPU_BINARY_PATH",
             "gpu_binary_required": True,
         }
@@ -183,6 +206,26 @@ def parse_args() -> argparse.Namespace:
         default=os.getenv("SIM_ACCEL_ROCM_HIPCC_OPT_LEVEL", "O1"),
         help="Optimization level for hipcc in the temporary ROCm bridge path (for example O1)",
     )
+    parser.add_argument(
+        "--clang",
+        default=shutil.which("clang-18") or shutil.which("clang") or "clang",
+        help="clang executable for cuda_clang_ir device-side emit-llvm compilation",
+    )
+    parser.add_argument(
+        "--llc",
+        default=shutil.which("llc-18") or shutil.which("llc") or "",
+        help="llc executable for LLVM IR to PTX conversion; falls back to clang -x ir if empty",
+    )
+    parser.add_argument(
+        "--cuda-arch",
+        default="",
+        help="CUDA GPU architecture for cuda_clang_ir/cuda_vl_ir backend, e.g. sm_86; generic if empty",
+    )
+    parser.add_argument(
+        "--llvm-link",
+        default=shutil.which("llvm-link-18") or shutil.which("llvm-link") or "llvm-link",
+        help="llvm-link executable for merging multiple LLVM IR files (cuda_vl_ir backend)",
+    )
     return parser.parse_args()
 
 
@@ -190,6 +233,20 @@ def _require_file(path: Path, label: str) -> Path:
     if not path.is_file():
         raise RuntimeError(f"Missing {label}: {path}")
     return path
+
+
+def _find_cpu_ref_source(bundle_dir: Path) -> Path | None:
+    """Return the CPU reference source file path, or None if not found.
+
+    Supports both the canonical name (kernel_generated.cpu.cpp) and the
+    bundle-named variant (<tb>.sim_accel.kernel.cu.cpu.cpp) produced by
+    Verilator when a monolithic kernel layout is used.
+    """
+    canonical = bundle_dir / "kernel_generated.cpu.cpp"
+    if canonical.is_file():
+        return canonical
+    matches = sorted(bundle_dir.glob("*.cpu.cpp"))
+    return matches[0] if matches else None
 
 
 def _run_logged(
@@ -315,6 +372,18 @@ def _resolve_execution_backend(bundle_config: dict[str, object], requested: str)
         raise RuntimeError(
             "execution_backend=rocm_llvm currently supports only source-style launch bundles "
             "(launch_backend=cuda) via the temporary HIP bridge"
+        )
+    if selected == "cuda_clang_ir" and launch_backend not in ("cuda", "circt-cubin"):
+        raise RuntimeError(
+            "execution_backend=cuda_clang_ir requires launch_backend=cuda or circt-cubin"
+        )
+    if selected == "cuda_vl_ir" and launch_backend not in ("cuda", "circt-cubin"):
+        raise RuntimeError(
+            "execution_backend=cuda_vl_ir requires launch_backend=cuda or circt-cubin"
+        )
+    if selected == "program_json_ir" and launch_backend not in ("cuda", "circt-cubin"):
+        raise RuntimeError(
+            "execution_backend=program_json_ir requires launch_backend=cuda or circt-cubin"
         )
     return selected
 
@@ -757,23 +826,36 @@ def _patch_rocm_launch_all_fallback(bridge_dir: Path) -> bool:
         "        status = hipMemcpy(state_out, state_in, sim_accel_eval_var_count() * static_cast<size_t>(nstates) * sizeof(uint64_t), hipMemcpyDeviceToDevice);",
         "        if (status != hipSuccess) return status;",
         "    }",
-        "    const uint32_t partition_count = sim_accel_eval_partition_count();",
-        "    if (partition_count == 0U) {",
-        *fallback_ops,
-        "        return hipSuccess;",
-        "    }",
-        "    for (uint32_t index = 0; index < partition_count; ++index) {",
-        "        const uint64_t* partition_in =",
-        "            sim_accel_eval_partition_read_from_output_count(index) ? state_out : state_in;",
-        "        status = sim_accel_eval_assignw_launch_partition(index, partition_in, state_out, nstates, block_size);",
-        "        if (status != hipSuccess) return status;",
-        "    }",
-        "    const uint32_t seq_partition_count = sim_accel_eval_seq_partition_count();",
-        "    for (uint32_t index = 0; index < seq_partition_count; ++index) {",
-        "        status = sim_accel_eval_assignw_launch_seq_partition(index, state_in, state_out, nstates, block_size);",
-        "        if (status != hipSuccess) return status;",
-        "    }",
-        "    return hipSuccess;",
+        *(
+            # When fallback kernels (full_comb/full_seq/full_all/part0) are available, use them
+            # directly — no partition loop needed.  This matches what the original CUDA link.cu
+            # does (calls full_all without a partition-count check).  The seq_partition loop is
+            # also skipped because fallback_ops already includes the sequential step.
+            [
+                *fallback_ops,
+                "    return hipSuccess;",
+            ]
+            if fallback_ops
+            else [
+                # No direct kernels available: fall back to partition + seq-partition loops.
+                "    const uint32_t partition_count = sim_accel_eval_partition_count();",
+                "    if (partition_count == 0U) {",
+                "        return hipSuccess;",
+                "    }",
+                "    for (uint32_t index = 0; index < partition_count; ++index) {",
+                "        const uint64_t* partition_in =",
+                "            sim_accel_eval_partition_read_from_output_count(index) ? state_out : state_in;",
+                "        status = sim_accel_eval_assignw_launch_partition(index, partition_in, state_out, nstates, block_size);",
+                "        if (status != hipSuccess) return status;",
+                "    }",
+                "    const uint32_t seq_partition_count = sim_accel_eval_seq_partition_count();",
+                "    for (uint32_t index = 0; index < seq_partition_count; ++index) {",
+                "        status = sim_accel_eval_assignw_launch_seq_partition(index, state_in, state_out, nstates, block_size);",
+                "        if (status != hipSuccess) return status;",
+                "    }",
+                "    return hipSuccess;",
+            ]
+        ),
         "}",
         "",
     ]
@@ -897,6 +979,49 @@ def _patch_rocm_monolithic_launch_bridge(bridge_dir: Path) -> bool:
     return True
 
 
+def _patch_rocm_cuda_arch_guards(bridge_dir: Path) -> int:
+    """Replace __CUDA_ARCH__ preprocessor guards with HIP-compatible equivalents.
+
+    hipify-perl does not translate __CUDA_ARCH__ to __HIP_DEVICE_COMPILE__, so
+    __host__ __device__ functions that guard device-side code with
+    #if !defined(__CUDA_ARCH__) / #if defined(__CUDA_ARCH__) would always take the
+    host branch under HIP, causing errors when host-only functions are called from
+    device code.  This patch makes both CUDA and HIP guard forms equivalent.
+    """
+    replacements = [
+        # #if !defined(__CUDA_ARCH__) → host-only in both CUDA and HIP
+        ("#if !defined(__CUDA_ARCH__)",
+         "#if !defined(__CUDA_ARCH__) && !defined(__HIP_DEVICE_COMPILE__)"),
+        ("#elif !defined(__CUDA_ARCH__)",
+         "#elif !defined(__CUDA_ARCH__) && !defined(__HIP_DEVICE_COMPILE__)"),
+        # #ifndef __CUDA_ARCH__ → host-only in both CUDA and HIP
+        ("#ifndef __CUDA_ARCH__",
+         "#if !defined(__CUDA_ARCH__) && !defined(__HIP_DEVICE_COMPILE__)"),
+        # #if defined(__CUDA_ARCH__) → device-only in both CUDA and HIP
+        ("#if defined(__CUDA_ARCH__)",
+         "#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)"),
+        ("#elif defined(__CUDA_ARCH__)",
+         "#elif defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)"),
+        # #ifdef __CUDA_ARCH__ → device-only in both CUDA and HIP
+        ("#ifdef __CUDA_ARCH__",
+         "#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)"),
+    ]
+    patched = 0
+    for path in sorted(bridge_dir.glob("**/*")):
+        if not path.is_file():
+            continue
+        if path.suffix not in (".cu", ".cpp", ".c", ".h", ".inc", ".cuh"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        updated = text
+        for needle, replacement in replacements:
+            updated = updated.replace(needle, replacement)
+        if updated != text:
+            path.write_text(updated, encoding="utf-8")
+            patched += 1
+    return patched
+
+
 def _patch_rocm_cluster_launch_bridge(bridge_dir: Path) -> list[int]:
     link_path = bridge_dir / "kernel_generated.link.cu"
     if not link_path.is_file():
@@ -980,6 +1105,9 @@ def _build_rocm_bridge(
         build_log=build_log,
         jobs=args.rocm_hipify_jobs,
     )
+    cuda_arch_patched = _patch_rocm_cuda_arch_guards(bridge_dir)
+    with build_log.open("a", encoding="utf-8") as fh:
+        fh.write(f"[rocm_bridge_cuda_arch_patch] files_patched={cuda_arch_patched}\n\n")
     if use_monolithic_structured:
         _patch_rocm_monolithic_launch_bridge(bridge_dir)
         with build_log.open("a", encoding="utf-8") as fh:
@@ -992,8 +1120,8 @@ def _build_rocm_bridge(
     host_objects: list[Path] = []
     include_separate_cpu_ref = include_cpu_ref and not use_monolithic_structured
     if include_separate_cpu_ref:
-        cpu_src = bundle_dir / "kernel_generated.cpu.cpp"
-        if cpu_src.is_file():
+        cpu_src = _find_cpu_ref_source(bundle_dir)
+        if cpu_src is not None:
             cpu_obj = obj_dir / "kernel_generated.cpu.o"
             cpu_cmd = [
                 args.cxx,
@@ -1061,8 +1189,8 @@ def _build_rocm_native_hsaco(
     compile_units = [native_dir / src.name for src in compile_sources]
     host_objects: list[Path] = []
     if include_cpu_ref:
-        cpu_src = bundle_dir / "kernel_generated.cpu.cpp"
-        if cpu_src.is_file():
+        cpu_src = _find_cpu_ref_source(bundle_dir)
+        if cpu_src is not None:
             cpu_obj = obj_dir / "kernel_generated.cpu.o"
             cpu_cmd = [
                 args.cxx,
@@ -1092,6 +1220,1026 @@ def _build_rocm_native_hsaco(
     ]
     _run_logged(cmd, cwd=native_dir, log_path=build_log, env=runtime_env)
     return runtime_env, len(compile_units) + len(host_objects), cluster_indices, native_cache_hit
+
+
+_CLANG_IR_DRIVER_TEMPLATE = """\
+// Generated by build_bench_bundle.py
+// CUDA driver-API loader for sim_accel_eval_assignw_u32_full_all compiled via clang++ -emit-llvm.
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+extern "C" uint32_t sim_accel_eval_var_count();
+
+namespace {
+CUmodule g_sim_accel_clang_ir_module = nullptr;
+CUfunction g_sim_accel_clang_ir_kernel = nullptr;
+char g_sim_accel_clang_ir_module_path[4096] = {};
+
+static cudaError_t sim_accel_clang_ir_cuda_error(CUresult status) {
+    return status == CUDA_SUCCESS ? cudaSuccess : cudaErrorUnknown;
+}
+
+static cudaError_t sim_accel_clang_ir_ensure_context() {
+    CUresult status = cuInit(0);
+    if (status != CUDA_SUCCESS) return sim_accel_clang_ir_cuda_error(status);
+    const cudaError_t runtime_status = cudaFree(nullptr);
+    if (runtime_status != cudaSuccess) return runtime_status;
+    CUcontext ctx = nullptr;
+    status = cuCtxGetCurrent(&ctx);
+    if (status != CUDA_SUCCESS) return sim_accel_clang_ir_cuda_error(status);
+    if (ctx) return cudaSuccess;
+    CUdevice device = 0;
+    status = cuDeviceGet(&device, 0);
+    if (status != CUDA_SUCCESS) return sim_accel_clang_ir_cuda_error(status);
+    status = cuDevicePrimaryCtxRetain(&ctx, device);
+    if (status != CUDA_SUCCESS) return sim_accel_clang_ir_cuda_error(status);
+    status = cuCtxSetCurrent(ctx);
+    return sim_accel_clang_ir_cuda_error(status);
+}
+}  // namespace
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_unload_module() {
+    if (!g_sim_accel_clang_ir_module) return cudaSuccess;
+    const CUresult status = cuModuleUnload(g_sim_accel_clang_ir_module);
+    g_sim_accel_clang_ir_module = nullptr;
+    g_sim_accel_clang_ir_kernel = nullptr;
+    g_sim_accel_clang_ir_module_path[0] = '\\0';
+    return sim_accel_clang_ir_cuda_error(status);
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_load_module(const char* ptx_path) {
+    if (!ptx_path || !ptx_path[0]) return cudaErrorInvalidValue;
+    cudaError_t status = sim_accel_clang_ir_ensure_context();
+    if (status != cudaSuccess) return status;
+    if (g_sim_accel_clang_ir_module &&
+            strcmp(g_sim_accel_clang_ir_module_path, ptx_path) == 0)
+        return cudaSuccess;
+    status = sim_accel_eval_assignw_clang_ir_unload_module();
+    if (status != cudaSuccess) return status;
+    CUresult driver_status = cuModuleLoad(&g_sim_accel_clang_ir_module, ptx_path);
+    if (driver_status != CUDA_SUCCESS) return sim_accel_clang_ir_cuda_error(driver_status);
+    driver_status = cuModuleGetFunction(&g_sim_accel_clang_ir_kernel,
+                                        g_sim_accel_clang_ir_module,
+                                        "sim_accel_eval_assignw_u32_full_all");
+    if (driver_status != CUDA_SUCCESS) {
+        sim_accel_eval_assignw_clang_ir_unload_module();
+        return sim_accel_clang_ir_cuda_error(driver_status);
+    }
+    strncpy(g_sim_accel_clang_ir_module_path, ptx_path,
+            sizeof(g_sim_accel_clang_ir_module_path) - 1U);
+    g_sim_accel_clang_ir_module_path[sizeof(g_sim_accel_clang_ir_module_path) - 1U] = '\\0';
+    return cudaSuccess;
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_launch_all(
+        const char* ptx_path,
+        const uint64_t* state_in,
+        uint64_t* state_out,
+        uint32_t nstates,
+        uint32_t block_size) {
+    if (!state_in || !state_out || block_size == 0U) return cudaErrorInvalidValue;
+    cudaError_t status = sim_accel_eval_assignw_clang_ir_load_module(ptx_path);
+    if (status != cudaSuccess) return status;
+    if (state_in != state_out) {
+        const size_t copy_bytes = static_cast<size_t>(sim_accel_eval_var_count())
+                                * static_cast<size_t>(nstates)
+                                * sizeof(uint64_t);
+        status = cudaMemcpy(state_out, state_in, copy_bytes, cudaMemcpyDeviceToDevice);
+        if (status != cudaSuccess) return status;
+    }
+    const uint32_t grid_x = (nstates + block_size - 1U) / block_size;
+    const uint64_t* kernel_state_in = state_in;
+    uint64_t* kernel_state_out = state_out;
+    uint32_t kernel_nstates = nstates;
+    void* params[] = {&kernel_state_in, &kernel_state_out, &kernel_nstates};
+    const CUresult driver_status = cuLaunchKernel(
+        g_sim_accel_clang_ir_kernel,
+        grid_x, 1U, 1U,
+        block_size, 1U, 1U,
+        0U, nullptr, params, nullptr);
+    return sim_accel_clang_ir_cuda_error(driver_status);
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_launch_all_inplace(
+        const char* ptx_path,
+        uint64_t* state,
+        uint32_t nstates,
+        uint32_t block_size) {
+    return sim_accel_eval_assignw_clang_ir_launch_all(ptx_path, state, state, nstates, block_size);
+}
+"""
+
+
+def _patch_link_for_clang_ir(link_text: str, *, ptx_relpath: str) -> str:
+    """Patch kernel_generated.link.cu to redirect full_all launches to the clang_ir driver."""
+    if "sim_accel_eval_assignw_clang_ir_bundle_ptx_path" in link_text:
+        return link_text  # already patched
+    if "#include <stdlib.h>" not in link_text:
+        link_text = link_text.replace(
+            "#include <stdint.h>\n",
+            "#include <stdint.h>\n#include <stdlib.h>\n",
+            1,
+        )
+    helper_block = (
+        '\nextern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_launch_all(\n'
+        "    const char* ptx_path,\n"
+        "    const uint64_t* state_in,\n"
+        "    uint64_t* state_out,\n"
+        "    uint32_t nstates,\n"
+        "    uint32_t block_size);\n"
+        'extern "C" __host__ cudaError_t sim_accel_eval_assignw_clang_ir_launch_all_inplace(\n'
+        "    const char* ptx_path,\n"
+        "    uint64_t* state,\n"
+        "    uint32_t nstates,\n"
+        "    uint32_t block_size);\n"
+        "static const char* sim_accel_eval_assignw_clang_ir_bundle_ptx_path() {\n"
+        f'    const char* override_path = getenv("{_GPU_BINARY_ENV_VAR}");\n'
+        "    if (override_path && override_path[0] != '\\0') return override_path;\n"
+        f'    return "{ptx_relpath}";\n'
+        "}\n"
+    )
+    helper_anchor = 'extern "C" __global__ void sim_accel_eval_assignw_u32_full_all('
+    if helper_anchor not in link_text:
+        raise RuntimeError(
+            "Could not find full-all kernel declaration in kernel_generated.link.cu; "
+            "cuda_clang_ir requires a bundle built with the standalone fuser path"
+        )
+    link_text = link_text.replace(helper_anchor, helper_block + "\n" + helper_anchor, 1)
+
+    inplace_replacement = (
+        "    return sim_accel_eval_assignw_clang_ir_launch_all_inplace(\n"
+        "        sim_accel_eval_assignw_clang_ir_bundle_ptx_path(),\n"
+        "        state,\n"
+        "        nstates,\n"
+        "        block_size);"
+    )
+    all_replacement = (
+        "    return sim_accel_eval_assignw_clang_ir_launch_all(\n"
+        "        sim_accel_eval_assignw_clang_ir_bundle_ptx_path(),\n"
+        "        state_in,\n"
+        "        state_out,\n"
+        "        nstates,\n"
+        "        block_size);"
+    )
+
+    # Patch static helper functions (new-style link.cu from program_json_to_full_all.py)
+    full_inplace_pattern = re.compile(
+        r'(static __host__ cudaError_t sim_accel_eval_launch_full_all_inplace_impl\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    full_all_pattern = re.compile(
+        r'(static __host__ cudaError_t sim_accel_eval_launch_full_all_impl\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    link_text, _ = full_inplace_pattern.subn(
+        lambda m: m.group(1) + inplace_replacement + m.group(3), link_text, count=1
+    )
+    link_text, _ = full_all_pattern.subn(
+        lambda m: m.group(1) + all_replacement + m.group(3), link_text, count=1
+    )
+
+    # Always patch the extern "C" wrappers (both old-style and new-style link.cu)
+    inplace_pattern = re.compile(
+        r'(extern "C" __host__ cudaError_t sim_accel_eval_assignw_launch_all_inplace\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    all_pattern = re.compile(
+        r'(extern "C" __host__ cudaError_t sim_accel_eval_assignw_launch_all\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    link_text, inplace_count = inplace_pattern.subn(
+        lambda m: m.group(1) + inplace_replacement + m.group(3), link_text, count=1
+    )
+    link_text, all_count = all_pattern.subn(
+        lambda m: m.group(1) + all_replacement + m.group(3), link_text, count=1
+    )
+    if inplace_count != 1 or all_count != 1:
+        raise RuntimeError("Failed to patch launch_all wrappers for cuda_clang_ir backend")
+    return link_text
+
+
+def _build_cuda_clang_ir(
+    *,
+    args: argparse.Namespace,
+    bundle_dir: Path,
+    binary_path: Path,
+    obj_dir: Path,
+    build_log: Path,
+    bundle_config: dict[str, object],
+    include_cpu_ref: bool,
+) -> tuple[dict[str, str], int, bool]:
+    cuda_arch = str(getattr(args, "cuda_arch", "") or "").strip()
+    clang_bin = str(getattr(args, "clang", "") or "").strip() or (
+        shutil.which("clang-18") or shutil.which("clang") or "clang"
+    )
+    llc_bin = str(getattr(args, "llc", "") or "").strip() or (
+        shutil.which("llc-18") or shutil.which("llc") or ""
+    )
+
+    clang_ir_dir = obj_dir / "cuda_clang_ir"
+    clang_ir_dir.mkdir(parents=True, exist_ok=True)
+
+    # Step 1: compile kernel_generated.full_all.cu → LLVM IR with clang
+    full_all_cu = _require_file(
+        bundle_dir / "kernel_generated.full_all.cu",
+        "kernel_generated.full_all.cu",
+    )
+    ll_path = bundle_dir / "kernel_generated.full_all.clang_ir.ll"
+    emit_cmd = [
+        clang_bin,
+        "-x", "cuda",
+        "--cuda-device-only",
+        "-emit-llvm",
+        "-S",
+        "-O3",
+        "-I.",
+        *([f"--cuda-gpu-arch={cuda_arch}"] if cuda_arch else []),
+        full_all_cu.name,
+        "-o", str(ll_path.relative_to(bundle_dir)),
+    ]
+    _run_logged(emit_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 2: LLVM IR → PTX
+    ptx_relpath = "kernel_generated.full_all.clang_ir.ptx"
+    ptx_path = bundle_dir / ptx_relpath
+    if llc_bin:
+        ptx_cmd: list[str] = [llc_bin, "-march=nvptx64"]
+        if cuda_arch:
+            ptx_cmd.append(f"-mcpu={cuda_arch}")
+        ptx_cmd += [str(ll_path), "-o", str(ptx_path)]
+    else:
+        ptx_cmd = [
+            clang_bin,
+            "-S",
+            "-x", "ir",
+            "--target=nvptx64-nvidia-cuda",
+            "-nocudalib",
+            *([f"--cuda-gpu-arch={cuda_arch}"] if cuda_arch else []),
+            str(ll_path),
+            "-o", str(ptx_path),
+        ]
+    _run_logged(ptx_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 3: patch link.cu → redirect launch_all to clang_ir driver
+    link_text = (bundle_dir / "kernel_generated.link.cu").read_text(encoding="utf-8")
+    patched_link = clang_ir_dir / "kernel_generated.link.cu"
+    patched_link.write_text(
+        _patch_link_for_clang_ir(link_text, ptx_relpath=ptx_relpath), encoding="utf-8"
+    )
+
+    # Step 4: write driver source
+    driver_src = clang_ir_dir / "kernel_generated.full_all.clang_ir_driver.cpp"
+    driver_src.write_text(_CLANG_IR_DRIVER_TEMPLATE, encoding="utf-8")
+
+    # Step 5: collect nvcc sources (all .cu except full_all.cu; use patched link.cu)
+    fixed: list[Path] = [
+        _require_file(bundle_dir / "bench_kernel.cu", "bench_kernel.cu"),
+        patched_link,
+    ]
+    extra: list[Path] = []
+    for pattern in (
+        "kernel_generated.part*.cu",
+        "kernel_generated.seqpart*.cu",
+        "kernel_generated.cluster*.cu",
+    ):
+        extra.extend(sorted(bundle_dir.glob(pattern)))
+    for p in sorted(bundle_dir.glob("kernel_generated.full_*.cu")):
+        if p.name != "kernel_generated.full_all.cu":
+            extra.append(p)
+    nvcc_sources = fixed + extra
+
+    effective_nvcc_flags = [
+        *args.nvcc_flag,
+        *(["-DSIM_ACCEL_SKIP_CPU_REFERENCE_BUILD=1"] if not include_cpu_ref else []),
+    ]
+
+    link_objects: list[Path] = []
+    for src in nvcc_sources:
+        obj = obj_dir / f"{src.name}.o"
+        cmd = [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            "-I.",
+            f"-I{bundle_dir}",
+            *effective_nvcc_flags,
+            "-c",
+            str(src),
+            "-o",
+            str(obj),
+        ]
+        _run_logged(cmd, cwd=bundle_dir, log_path=build_log)
+        link_objects.append(obj)
+
+    # Compile clang_ir driver with nvcc
+    driver_obj = obj_dir / "kernel_generated.full_all.clang_ir_driver.o"
+    _run_logged(
+        [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            "-I.",
+            *args.nvcc_flag,
+            "-c",
+            str(driver_src),
+            "-o",
+            str(driver_obj),
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+    link_objects.append(driver_obj)
+
+    # Compile CPU reference
+    if include_cpu_ref:
+        cpu_src = _find_cpu_ref_source(bundle_dir)
+        if cpu_src is not None:
+            cpu_obj = obj_dir / "kernel_generated.cpu.o"
+            _run_logged(
+                [
+                    args.cxx,
+                    "-O3",
+                    "-std=c++17",
+                    "-I.",
+                    *args.cxx_flag,
+                    "-c",
+                    str(cpu_src),
+                    "-o",
+                    str(cpu_obj),
+                ],
+                cwd=bundle_dir,
+                log_path=build_log,
+            )
+            link_objects.append(cpu_obj)
+
+    # Link
+    _run_logged(
+        [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            *effective_nvcc_flags,
+            *(str(p) for p in link_objects),
+            "-lcuda",
+            "-o",
+            args.binary_name,
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    smoke_env = _gpu_binary_env(bundle_dir, bundle_config)
+    compiled_count = len(nvcc_sources) + 1 + (
+        1 if include_cpu_ref and _find_cpu_ref_source(bundle_dir) is not None else 0
+    )
+    return smoke_env, compiled_count, False
+
+
+_VL_IR_DRIVER_TEMPLATE = """\
+// Generated by build_bench_bundle.py
+// CUDA driver-API loader for Verilator-generated full_comb + full_seq kernels compiled via clang++ -emit-llvm.
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+extern "C" uint32_t sim_accel_eval_var_count();
+
+namespace {
+CUmodule g_sim_accel_vl_ir_module = nullptr;
+CUfunction g_sim_accel_vl_ir_comb_kernel = nullptr;
+CUfunction g_sim_accel_vl_ir_seq_kernel = nullptr;
+char g_sim_accel_vl_ir_module_path[4096] = {};
+
+static cudaError_t sim_accel_vl_ir_cuda_error(CUresult status) {
+    return status == CUDA_SUCCESS ? cudaSuccess : cudaErrorUnknown;
+}
+
+static cudaError_t sim_accel_vl_ir_ensure_context() {
+    CUresult status = cuInit(0);
+    if (status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(status);
+    const cudaError_t runtime_status = cudaFree(nullptr);
+    if (runtime_status != cudaSuccess) return runtime_status;
+    CUcontext ctx = nullptr;
+    status = cuCtxGetCurrent(&ctx);
+    if (status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(status);
+    if (ctx) return cudaSuccess;
+    CUdevice device = 0;
+    status = cuDeviceGet(&device, 0);
+    if (status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(status);
+    status = cuDevicePrimaryCtxRetain(&ctx, device);
+    if (status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(status);
+    status = cuCtxSetCurrent(ctx);
+    return sim_accel_vl_ir_cuda_error(status);
+}
+}  // namespace
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_unload_module() {
+    if (!g_sim_accel_vl_ir_module) return cudaSuccess;
+    const CUresult status = cuModuleUnload(g_sim_accel_vl_ir_module);
+    g_sim_accel_vl_ir_module = nullptr;
+    g_sim_accel_vl_ir_comb_kernel = nullptr;
+    g_sim_accel_vl_ir_seq_kernel = nullptr;
+    g_sim_accel_vl_ir_module_path[0] = '\\0';
+    return sim_accel_vl_ir_cuda_error(status);
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_load_module(const char* ptx_path) {
+    if (!ptx_path || !ptx_path[0]) return cudaErrorInvalidValue;
+    cudaError_t status = sim_accel_vl_ir_ensure_context();
+    if (status != cudaSuccess) return status;
+    if (g_sim_accel_vl_ir_module &&
+            strcmp(g_sim_accel_vl_ir_module_path, ptx_path) == 0)
+        return cudaSuccess;
+    status = sim_accel_eval_assignw_vl_ir_unload_module();
+    if (status != cudaSuccess) return status;
+    CUresult driver_status = cuModuleLoad(&g_sim_accel_vl_ir_module, ptx_path);
+    if (driver_status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(driver_status);
+    driver_status = cuModuleGetFunction(&g_sim_accel_vl_ir_comb_kernel,
+                                        g_sim_accel_vl_ir_module,
+                                        "sim_accel_eval_assignw_u32_full_comb");
+    if (driver_status != CUDA_SUCCESS) {
+        sim_accel_eval_assignw_vl_ir_unload_module();
+        return sim_accel_vl_ir_cuda_error(driver_status);
+    }
+    driver_status = cuModuleGetFunction(&g_sim_accel_vl_ir_seq_kernel,
+                                        g_sim_accel_vl_ir_module,
+                                        "sim_accel_eval_assignw_u32_full_seq");
+    if (driver_status != CUDA_SUCCESS) {
+        sim_accel_eval_assignw_vl_ir_unload_module();
+        return sim_accel_vl_ir_cuda_error(driver_status);
+    }
+    strncpy(g_sim_accel_vl_ir_module_path, ptx_path,
+            sizeof(g_sim_accel_vl_ir_module_path) - 1U);
+    g_sim_accel_vl_ir_module_path[sizeof(g_sim_accel_vl_ir_module_path) - 1U] = '\\0';
+    return cudaSuccess;
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_launch_all(
+        const char* ptx_path,
+        const uint64_t* state_in,
+        uint64_t* state_out,
+        uint32_t nstates,
+        uint32_t block_size) {
+    if (!state_in || !state_out || block_size == 0U) return cudaErrorInvalidValue;
+    cudaError_t status = sim_accel_eval_assignw_vl_ir_load_module(ptx_path);
+    if (status != cudaSuccess) return status;
+    if (state_in != state_out) {
+        const size_t copy_bytes = static_cast<size_t>(sim_accel_eval_var_count())
+                                * static_cast<size_t>(nstates)
+                                * sizeof(uint64_t);
+        status = cudaMemcpy(state_out, state_in, copy_bytes, cudaMemcpyDeviceToDevice);
+        if (status != cudaSuccess) return status;
+    }
+    const uint32_t grid_x = (nstates + block_size - 1U) / block_size;
+    const uint64_t* kernel_state_in = state_in;
+    uint64_t* kernel_state_out = state_out;
+    uint32_t kernel_nstates = nstates;
+    void* params[] = {&kernel_state_in, &kernel_state_out, &kernel_nstates};
+    CUresult driver_status = cuLaunchKernel(
+        g_sim_accel_vl_ir_comb_kernel,
+        grid_x, 1U, 1U,
+        block_size, 1U, 1U,
+        0U, nullptr, params, nullptr);
+    if (driver_status != CUDA_SUCCESS) return sim_accel_vl_ir_cuda_error(driver_status);
+    driver_status = cuLaunchKernel(
+        g_sim_accel_vl_ir_seq_kernel,
+        grid_x, 1U, 1U,
+        block_size, 1U, 1U,
+        0U, nullptr, params, nullptr);
+    return sim_accel_vl_ir_cuda_error(driver_status);
+}
+
+extern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_launch_all_inplace(
+        const char* ptx_path,
+        uint64_t* state,
+        uint32_t nstates,
+        uint32_t block_size) {
+    return sim_accel_eval_assignw_vl_ir_launch_all(ptx_path, state, state, nstates, block_size);
+}
+"""
+
+
+def _patch_link_for_vl_ir(link_text: str, *, ptx_relpath: str) -> str:
+    """Patch kernel_generated.link.cu to redirect full_all launches to the vl_ir driver."""
+    if "sim_accel_eval_assignw_vl_ir_bundle_ptx_path" in link_text:
+        return link_text  # already patched
+    if "#include <stdlib.h>" not in link_text:
+        link_text = link_text.replace(
+            "#include <stdint.h>\n",
+            "#include <stdint.h>\n#include <stdlib.h>\n",
+            1,
+        )
+    helper_block = (
+        '\nextern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_launch_all(\n'
+        "    const char* ptx_path,\n"
+        "    const uint64_t* state_in,\n"
+        "    uint64_t* state_out,\n"
+        "    uint32_t nstates,\n"
+        "    uint32_t block_size);\n"
+        'extern "C" __host__ cudaError_t sim_accel_eval_assignw_vl_ir_launch_all_inplace(\n'
+        "    const char* ptx_path,\n"
+        "    uint64_t* state,\n"
+        "    uint32_t nstates,\n"
+        "    uint32_t block_size);\n"
+        "static const char* sim_accel_eval_assignw_vl_ir_bundle_ptx_path() {\n"
+        f'    const char* override_path = getenv("{_GPU_BINARY_ENV_VAR}");\n'
+        "    if (override_path && override_path[0] != '\\0') return override_path;\n"
+        f'    return "{ptx_relpath}";\n'
+        "}\n"
+    )
+    # Prefer to anchor before full_comb (Verilator-native), fall back to full_all
+    helper_anchor_comb = 'extern "C" __global__ void sim_accel_eval_assignw_u32_full_comb('
+    helper_anchor_all = 'extern "C" __global__ void sim_accel_eval_assignw_u32_full_all('
+    if helper_anchor_comb in link_text:
+        link_text = link_text.replace(helper_anchor_comb, helper_block + "\n" + helper_anchor_comb, 1)
+    elif helper_anchor_all in link_text:
+        link_text = link_text.replace(helper_anchor_all, helper_block + "\n" + helper_anchor_all, 1)
+    else:
+        raise RuntimeError(
+            "Could not find full_comb or full_all kernel declaration in kernel_generated.link.cu; "
+            "cuda_vl_ir requires a Verilator --sim-accel-only bundle"
+        )
+
+    inplace_replacement = (
+        "    return sim_accel_eval_assignw_vl_ir_launch_all_inplace(\n"
+        "        sim_accel_eval_assignw_vl_ir_bundle_ptx_path(),\n"
+        "        state,\n"
+        "        nstates,\n"
+        "        block_size);"
+    )
+    all_replacement = (
+        "    return sim_accel_eval_assignw_vl_ir_launch_all(\n"
+        "        sim_accel_eval_assignw_vl_ir_bundle_ptx_path(),\n"
+        "        state_in,\n"
+        "        state_out,\n"
+        "        nstates,\n"
+        "        block_size);"
+    )
+
+    # Patch static helper functions (new-style link.cu from program_json_to_full_all.py)
+    full_inplace_pattern = re.compile(
+        r'(static __host__ cudaError_t sim_accel_eval_launch_full_all_inplace_impl\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    full_all_pattern = re.compile(
+        r'(static __host__ cudaError_t sim_accel_eval_launch_full_all_impl\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    link_text, _ = full_inplace_pattern.subn(
+        lambda m: m.group(1) + inplace_replacement + m.group(3), link_text, count=1
+    )
+    link_text, _ = full_all_pattern.subn(
+        lambda m: m.group(1) + all_replacement + m.group(3), link_text, count=1
+    )
+
+    # Always patch the extern "C" wrappers
+    inplace_pattern = re.compile(
+        r'(extern "C" __host__ cudaError_t sim_accel_eval_assignw_launch_all_inplace\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    all_pattern = re.compile(
+        r'(extern "C" __host__ cudaError_t sim_accel_eval_assignw_launch_all\([^)]*\)\s*\{\n)'
+        r'(.*?)'
+        r'(\n\})',
+        re.DOTALL,
+    )
+    link_text, inplace_count = inplace_pattern.subn(
+        lambda m: m.group(1) + inplace_replacement + m.group(3), link_text, count=1
+    )
+    link_text, all_count = all_pattern.subn(
+        lambda m: m.group(1) + all_replacement + m.group(3), link_text, count=1
+    )
+    if inplace_count != 1 or all_count != 1:
+        raise RuntimeError("Failed to patch launch_all wrappers for cuda_vl_ir backend")
+    return link_text
+
+
+def _build_cuda_vl_ir(
+    *,
+    args: argparse.Namespace,
+    bundle_dir: Path,
+    binary_path: Path,
+    obj_dir: Path,
+    build_log: Path,
+    bundle_config: dict[str, object],
+    include_cpu_ref: bool,
+) -> tuple[dict[str, str], int, bool]:
+    cuda_arch = str(getattr(args, "cuda_arch", "") or "").strip()
+    clang_bin = str(getattr(args, "clang", "") or "").strip() or (
+        shutil.which("clang-18") or shutil.which("clang") or "clang"
+    )
+    llc_bin = str(getattr(args, "llc", "") or "").strip() or (
+        shutil.which("llc-18") or shutil.which("llc") or ""
+    )
+    llvm_link_bin = str(getattr(args, "llvm_link", "") or "").strip() or (
+        shutil.which("llvm-link-18") or shutil.which("llvm-link") or "llvm-link"
+    )
+
+    vl_ir_dir = obj_dir / "cuda_vl_ir"
+    vl_ir_dir.mkdir(parents=True, exist_ok=True)
+
+    full_comb_cu = _require_file(
+        bundle_dir / "kernel_generated.full_comb.cu",
+        "kernel_generated.full_comb.cu",
+    )
+    full_seq_cu = _require_file(
+        bundle_dir / "kernel_generated.full_seq.cu",
+        "kernel_generated.full_seq.cu",
+    )
+
+    emit_flags = [
+        clang_bin,
+        "-x", "cuda",
+        "--cuda-device-only",
+        "-emit-llvm",
+        "-S",
+        "-O1",
+        "-fbracket-depth=1024",
+        "-I.",
+        *([f"--cuda-gpu-arch={cuda_arch}"] if cuda_arch else []),
+    ]
+
+    # Step 1a: full_comb.cu → LLVM IR
+    comb_ll = bundle_dir / "kernel_generated.full_comb.vl_ir.ll"
+    _run_logged(
+        emit_flags + [full_comb_cu.name, "-o", str(comb_ll.relative_to(bundle_dir))],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    # Step 1b: full_seq.cu → LLVM IR
+    seq_ll = bundle_dir / "kernel_generated.full_seq.vl_ir.ll"
+    _run_logged(
+        emit_flags + [full_seq_cu.name, "-o", str(seq_ll.relative_to(bundle_dir))],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    # Step 2: llvm-link → merged IR
+    merged_ll = bundle_dir / "kernel_generated.vl_ir.ll"
+    _run_logged(
+        [llvm_link_bin, str(comb_ll), str(seq_ll), "-o", str(merged_ll)],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    # Step 3: LLVM IR → PTX
+    ptx_relpath = "kernel_generated.vl_ir.ptx"
+    ptx_path = bundle_dir / ptx_relpath
+    if llc_bin:
+        ptx_cmd: list[str] = [llc_bin, "-march=nvptx64"]
+        if cuda_arch:
+            ptx_cmd.append(f"-mcpu={cuda_arch}")
+        ptx_cmd += [str(merged_ll), "-o", str(ptx_path)]
+    else:
+        ptx_cmd = [
+            clang_bin,
+            "-S",
+            "-x", "ir",
+            "--target=nvptx64-nvidia-cuda",
+            "-nocudalib",
+            *([f"--cuda-gpu-arch={cuda_arch}"] if cuda_arch else []),
+            str(merged_ll),
+            "-o", str(ptx_path),
+        ]
+    _run_logged(ptx_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 3b: ptxas → cubin (avoid 2-min JIT penalty at runtime)
+    ptxas_bin = shutil.which("ptxas") or "ptxas"
+    cubin_relpath = "kernel_generated.vl_ir.cubin"
+    cubin_path = bundle_dir / cubin_relpath
+    ptxas_cmd = [ptxas_bin]
+    if cuda_arch:
+        ptxas_cmd += ["--gpu-name", cuda_arch]
+    ptxas_cmd += [str(ptx_path), "-o", str(cubin_path)]
+    _run_logged(ptxas_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 4: patch link.cu → redirect launch_all to vl_ir driver
+    link_text = (bundle_dir / "kernel_generated.link.cu").read_text(encoding="utf-8")
+    patched_link = vl_ir_dir / "kernel_generated.link.cu"
+    patched_link.write_text(
+        _patch_link_for_vl_ir(link_text, ptx_relpath=cubin_relpath), encoding="utf-8"
+    )
+
+    # Step 5: write driver source
+    driver_src = vl_ir_dir / "kernel_generated.vl_ir_driver.cpp"
+    driver_src.write_text(_VL_IR_DRIVER_TEMPLATE, encoding="utf-8")
+
+    # Step 6: collect nvcc sources
+    # full_comb.cu is compiled to PTX only (not called via CUDA runtime API from link.cu).
+    # full_seq.cu must be compiled by nvcc because link.cu's launch_seq_partition calls it
+    # via <<<>>> syntax. It is also included in the PTX for the vl_ir driver's launch_all path.
+    # full_all.cu is kept in nvcc sources so the linker can satisfy the extern __global__
+    # forward declaration in link.cu (the kernel body is never called at runtime).
+    fixed: list[Path] = [
+        _require_file(bundle_dir / "bench_kernel.cu", "bench_kernel.cu"),
+        patched_link,
+    ]
+    extra: list[Path] = []
+    for pattern in (
+        "kernel_generated.part*.cu",
+        "kernel_generated.seqpart*.cu",
+        "kernel_generated.cluster*.cu",
+    ):
+        extra.extend(sorted(bundle_dir.glob(pattern)))
+    for p in sorted(bundle_dir.glob("kernel_generated.full_*.cu")):
+        if p.name != "kernel_generated.full_comb.cu":
+            extra.append(p)  # full_seq.cu + full_all.cu compiled by nvcc; full_comb.cu PTX only
+    nvcc_sources = fixed + extra
+
+    # When CPU reference is skipped, suppress bench_kernel.cu's CPU reference calls.
+    effective_nvcc_flags = [
+        *args.nvcc_flag,
+        *(["-DSIM_ACCEL_SKIP_CPU_REFERENCE_BUILD=1"] if not include_cpu_ref else []),
+    ]
+
+    link_objects: list[Path] = []
+    for src in nvcc_sources:
+        obj = obj_dir / f"{src.name}.o"
+        cmd = [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            "-I.",
+            f"-I{bundle_dir}",
+            *effective_nvcc_flags,
+            "-c",
+            str(src),
+            "-o",
+            str(obj),
+        ]
+        _run_logged(cmd, cwd=bundle_dir, log_path=build_log)
+        link_objects.append(obj)
+
+    # Compile vl_ir driver with nvcc
+    driver_obj = obj_dir / "kernel_generated.vl_ir_driver.o"
+    _run_logged(
+        [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            "-I.",
+            *args.nvcc_flag,
+            "-c",
+            str(driver_src),
+            "-o",
+            str(driver_obj),
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+    link_objects.append(driver_obj)
+
+    # Compile CPU reference
+    if include_cpu_ref:
+        cpu_src = _find_cpu_ref_source(bundle_dir)
+        if cpu_src is not None:
+            cpu_obj = obj_dir / "kernel_generated.cpu.o"
+            _run_logged(
+                [
+                    args.cxx,
+                    "-O3",
+                    "-std=c++17",
+                    "-I.",
+                    *args.cxx_flag,
+                    "-c",
+                    str(cpu_src),
+                    "-o",
+                    str(cpu_obj),
+                ],
+                cwd=bundle_dir,
+                log_path=build_log,
+            )
+            link_objects.append(cpu_obj)
+
+    # Link
+    _run_logged(
+        [
+            args.nvcc,
+            "-O3",
+            "-std=c++17",
+            "-rdc=true",
+            *effective_nvcc_flags,
+            *(str(p) for p in link_objects),
+            "-lcuda",
+            "-o",
+            args.binary_name,
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    smoke_env = _gpu_binary_env(bundle_dir, bundle_config)
+    compiled_count = len(nvcc_sources) + 1 + (
+        1 if include_cpu_ref and _find_cpu_ref_source(bundle_dir) is not None else 0
+    )
+    return smoke_env, compiled_count, False
+
+
+def _build_pj_ir(
+    *,
+    args: argparse.Namespace,
+    bundle_dir: Path,
+    binary_path: Path,
+    obj_dir: Path,
+    build_log: Path,
+    bundle_config: dict[str, object],
+    include_cpu_ref: bool,
+) -> tuple[dict[str, str], int, bool]:
+    """Build bench using program.json → LLVM IR → opt → llc → ptxas (cubin) pipeline.
+
+    Avoids nvcc/hipcc for GPU kernel compilation.  Produces an offline-compiled cubin
+    so cuModuleLoad doesn't trigger the 2-minute JIT penalty of our larger PTX.
+    """
+    cuda_arch = str(getattr(args, "cuda_arch", "") or "").strip()
+    llc_bin = str(getattr(args, "llc", "") or "").strip() or (
+        shutil.which("llc-18") or shutil.which("llc") or "llc"
+    )
+    llvm_link_bin = str(getattr(args, "llvm_link", "") or "").strip() or (
+        shutil.which("llvm-link-18") or shutil.which("llvm-link") or "llvm-link"
+    )
+    opt_bin = shutil.which("opt-18") or shutil.which("opt") or "opt"
+    ptxas_bin = shutil.which("ptxas") or "ptxas"
+
+    pj_ir_dir = obj_dir / "pj_ir"
+    pj_ir_dir.mkdir(parents=True, exist_ok=True)
+
+    # Locate program.json (Verilator --sim-accel-ir-only output)
+    program_json_files = sorted(bundle_dir.glob("*.program.json"))
+    if not program_json_files:
+        raise RuntimeError("program_json_ir: no *.program.json found in bundle_dir")
+    program_json = program_json_files[0]
+
+    # Step 1: program.json → LLVM IR text for comb + seq kernels
+    pj_ir_script = Path(__file__).resolve().parent / "program_json_to_llvm_ir.py"
+    comb_ll = pj_ir_dir / "pj_ir.comb.ll"
+    seq_ll = pj_ir_dir / "pj_ir.seq.ll"
+    gen_cmd = [
+        sys.executable, str(pj_ir_script),
+        str(program_json),
+        "--target", "nvptx",
+        "--out-comb", str(comb_ll),
+        "--out-seq", str(seq_ll),
+    ]
+    if cuda_arch:
+        gen_cmd += ["--cpu", cuda_arch]
+    _run_logged(gen_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 2: generate preload_word stub (returns 0; real preload data is in state memory)
+    stub_ll = pj_ir_dir / "preload_stub.ll"
+    stub_ll.write_text(
+        'target triple = "nvptx64-nvidia-cuda"\n'
+        "define i64 @sim_accel_preload_word(i32, i32, i32) {\n"
+        "  ret i64 0\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    # Step 3: llvm-link → merged bitcode
+    merged_bc = pj_ir_dir / "pj_ir.linked.bc"
+    _run_logged(
+        [llvm_link_bin, str(comb_ll), str(seq_ll), str(stub_ll), "-o", str(merged_bc)],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    # Step 4: opt-18 -O3 (our emitted IR is unoptimized; clang-based vl_ir skips this)
+    opt_bc = pj_ir_dir / "pj_ir.opt.bc"
+    _run_logged(
+        [opt_bin, "-O3", str(merged_bc), "-o", str(opt_bc)],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    # Step 5: llc → PTX
+    ptx_path = pj_ir_dir / "pj_ir.ptx"
+    llc_cmd = [llc_bin, "-march=nvptx64"]
+    if cuda_arch:
+        llc_cmd.append(f"-mcpu={cuda_arch}")
+    llc_cmd += ["-O3", str(opt_bc), "-o", str(ptx_path)]
+    _run_logged(llc_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Step 6: ptxas → cubin  (offline compile avoids the ~2-minute JIT penalty)
+    cubin_relpath = "kernel_generated.pj_ir.cubin"
+    cubin_path = bundle_dir / cubin_relpath
+    ptxas_cmd = [ptxas_bin]
+    if cuda_arch:
+        ptxas_cmd += ["--gpu-name", cuda_arch]
+    ptxas_cmd += [str(ptx_path), "-o", str(cubin_path)]
+    _run_logged(ptxas_cmd, cwd=bundle_dir, log_path=build_log)
+
+    # Steps 7+: build bench binary identical to cuda_vl_ir
+    # (same driver template; same launch mechanism; different GPU binary path)
+    link_text = (bundle_dir / "kernel_generated.link.cu").read_text(encoding="utf-8")
+    patched_link = pj_ir_dir / "kernel_generated.link.cu"
+    patched_link.write_text(
+        _patch_link_for_vl_ir(link_text, ptx_relpath=cubin_relpath), encoding="utf-8"
+    )
+
+    driver_src = pj_ir_dir / "kernel_generated.vl_ir_driver.cpp"
+    driver_src.write_text(_VL_IR_DRIVER_TEMPLATE, encoding="utf-8")
+
+    fixed: list[Path] = [
+        _require_file(bundle_dir / "bench_kernel.cu", "bench_kernel.cu"),
+        patched_link,
+    ]
+    extra: list[Path] = []
+    for pattern in (
+        "kernel_generated.part*.cu",
+        "kernel_generated.seqpart*.cu",
+        "kernel_generated.cluster*.cu",
+    ):
+        extra.extend(sorted(bundle_dir.glob(pattern)))
+    for p in sorted(bundle_dir.glob("kernel_generated.full_*.cu")):
+        if p.name != "kernel_generated.full_comb.cu":
+            extra.append(p)
+    nvcc_sources = fixed + extra
+
+    effective_nvcc_flags = [
+        *args.nvcc_flag,
+        *(["-DSIM_ACCEL_SKIP_CPU_REFERENCE_BUILD=1"] if not include_cpu_ref else []),
+    ]
+
+    link_objects: list[Path] = []
+    for src in nvcc_sources:
+        obj = pj_ir_dir / f"{src.name}.o"
+        _run_logged(
+            [
+                args.nvcc, "-O3", "-std=c++17", "-rdc=true", "-I.", f"-I{bundle_dir}",
+                *effective_nvcc_flags,
+                "-c", str(src), "-o", str(obj),
+            ],
+            cwd=bundle_dir,
+            log_path=build_log,
+        )
+        link_objects.append(obj)
+
+    driver_obj = pj_ir_dir / "kernel_generated.vl_ir_driver.o"
+    _run_logged(
+        [
+            args.nvcc, "-O3", "-std=c++17", "-rdc=true", "-I.", *args.nvcc_flag,
+            "-c", str(driver_src), "-o", str(driver_obj),
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+    link_objects.append(driver_obj)
+
+    if include_cpu_ref:
+        cpu_src = _find_cpu_ref_source(bundle_dir)
+        if cpu_src is not None:
+            cpu_obj = pj_ir_dir / "kernel_generated.cpu.o"
+            _run_logged(
+                [
+                    args.cxx, "-O3", "-std=c++17", "-I.", *args.cxx_flag,
+                    "-c", str(cpu_src), "-o", str(cpu_obj),
+                ],
+                cwd=bundle_dir,
+                log_path=build_log,
+            )
+            link_objects.append(cpu_obj)
+
+    _run_logged(
+        [
+            args.nvcc, "-O3", "-std=c++17", "-rdc=true", *effective_nvcc_flags,
+            *(str(p) for p in link_objects),
+            "-lcuda", "-o", args.binary_name,
+        ],
+        cwd=bundle_dir,
+        log_path=build_log,
+    )
+
+    smoke_env = _gpu_binary_env(bundle_dir, bundle_config)
+    compiled_count = len(nvcc_sources) + 1 + (
+        1 if include_cpu_ref and _find_cpu_ref_source(bundle_dir) is not None else 0
+    )
+    return smoke_env, compiled_count, False
 
 
 def _collect_cuda_sources(bundle_dir: Path, *, launch_backend: str) -> list[Path]:
@@ -1199,42 +2347,51 @@ def main() -> int:
     bundle_config = _load_bundle_config(bundle_dir)
     launch_backend = str(bundle_config.get("launch_backend", "cuda"))
     execution_backend = _resolve_execution_backend(bundle_config, args.execution_backend)
+    # When the requested execution backend differs from what the bundle was originally built for,
+    # refresh the gpu_binary_* metadata fields to match the actual backend.
+    if execution_backend != str(bundle_config.get("execution_backend", "")):
+        bundle_config.update(
+            _default_gpu_binary_metadata(
+                launch_backend=launch_backend,
+                execution_backend=execution_backend,
+            )
+        )
     rocm_launch_mode = _resolve_rocm_launch_mode(bundle_config, execution_backend)
     build_log = bundle_dir / ("build_hipcc.log" if execution_backend == "rocm_llvm" else "build_nvcc.log")
-    effective_compiler_backend = (
-        (
-            "rocdl_hsaco_native"
-            if execution_backend == "rocm_llvm" and rocm_launch_mode == "native-hsaco"
-            else "rocm_bridge_source"
+    if execution_backend == "rocm_llvm":
+        effective_compiler_backend = (
+            "rocdl_hsaco_native" if rocm_launch_mode == "native-hsaco" else "rocm_bridge_source"
         )
-        if execution_backend == "rocm_llvm"
-        else str(bundle_config.get("compiler_backend", "nvptx"))
-    )
-    effective_launcher_backend = (
-        (
-            "hip_module"
-            if execution_backend == "rocm_llvm" and rocm_launch_mode == "native-hsaco"
-            else "hip_runtime"
+        effective_launcher_backend = (
+            "hip_module" if rocm_launch_mode == "native-hsaco" else "hip_runtime"
         )
-        if execution_backend == "rocm_llvm"
-        else str(bundle_config.get("launcher_backend", "cuda_runtime"))
-    )
+    elif execution_backend == "cuda_clang_ir":
+        effective_compiler_backend = "clang_llvm_ptx"
+        effective_launcher_backend = "cuda_driver"
+    elif execution_backend == "cuda_vl_ir":
+        effective_compiler_backend = "clang_llvm_ptx_vl"
+        effective_launcher_backend = "cuda_driver"
+    else:
+        effective_compiler_backend = str(bundle_config.get("compiler_backend", "nvptx"))
+        effective_launcher_backend = str(bundle_config.get("launcher_backend", "cuda_runtime"))
 
     _require_file(bundle_dir / "bench_kernel.cu", "bench_kernel.cu")
     _require_file(bundle_dir / "kernel_generated.link.cu", "kernel_generated.link.cu")
+    _ptx_build_backends = {"cuda_clang_ir", "cuda_vl_ir", "program_json_ir"}
     if (
         bool(bundle_config.get("gpu_binary_required"))
+        and execution_backend not in _ptx_build_backends
         and (execution_backend != "rocm_llvm" or rocm_launch_mode == "native-hsaco")
     ):
         gpu_binary_relpath = str(bundle_config.get("gpu_binary_relpath") or "").strip()
         if gpu_binary_relpath:
             _require_file(bundle_dir / gpu_binary_relpath, gpu_binary_relpath)
-    if launch_backend == "circt-cubin":
+    if launch_backend == "circt-cubin" and execution_backend not in _ptx_build_backends:
         _require_file(
             bundle_dir / "kernel_generated.full_all.circt_driver.cpp",
             "kernel_generated.full_all.circt_driver.cpp",
         )
-    if not args.skip_cpu_ref and not (bundle_dir / "kernel_generated.cpu.cpp").is_file():
+    if not args.skip_cpu_ref and _find_cpu_ref_source(bundle_dir) is None:
         args.skip_cpu_ref = True
 
     if args.clean_obj_dir and obj_dir.exists():
@@ -1245,8 +2402,12 @@ def main() -> int:
     cuda_sources = _collect_cuda_sources(bundle_dir, launch_backend=launch_backend)
     compiled_rocm_bridge = 0
     compiled_rocm_native = 0
+    compiled_clang_ir = 0
+    compiled_vl_ir = 0
     rocm_cluster_indices: list[int] = []
     rocm_smoke_env: dict[str, str] | None = None
+    clang_ir_smoke_env: dict[str, str] | None = None
+    vl_ir_smoke_env: dict[str, str] | None = None
     rocm_bridge_cache_hit = False
     rocm_native_cache_hit = False
 
@@ -1281,6 +2442,36 @@ def main() -> int:
                 cuda_sources=cuda_sources,
                 include_cpu_ref=not args.skip_cpu_ref,
             )
+    elif execution_backend == "cuda_clang_ir":
+        clang_ir_smoke_env, compiled_clang_ir, _ = _build_cuda_clang_ir(
+            args=args,
+            bundle_dir=bundle_dir,
+            binary_path=binary_path,
+            obj_dir=obj_dir,
+            build_log=build_log,
+            bundle_config=bundle_config,
+            include_cpu_ref=not args.skip_cpu_ref,
+        )
+    elif execution_backend == "cuda_vl_ir":
+        vl_ir_smoke_env, compiled_vl_ir, _ = _build_cuda_vl_ir(
+            args=args,
+            bundle_dir=bundle_dir,
+            binary_path=binary_path,
+            obj_dir=obj_dir,
+            build_log=build_log,
+            bundle_config=bundle_config,
+            include_cpu_ref=not args.skip_cpu_ref,
+        )
+    elif execution_backend == "program_json_ir":
+        vl_ir_smoke_env, compiled_vl_ir, _ = _build_pj_ir(
+            args=args,
+            bundle_dir=bundle_dir,
+            binary_path=binary_path,
+            obj_dir=obj_dir,
+            build_log=build_log,
+            bundle_config=bundle_config,
+            include_cpu_ref=not args.skip_cpu_ref,
+        )
     else:
         cuda_seq_fallback_applied = _patch_cuda_seq_partition_fallback(bundle_dir)
         if cuda_seq_fallback_applied:
@@ -1326,7 +2517,10 @@ def main() -> int:
             link_objects.append(driver_obj)
 
         if not args.skip_cpu_ref:
-            cpu_src = _require_file(bundle_dir / "kernel_generated.cpu.cpp", "kernel_generated.cpu.cpp")
+            _cpu_src = _find_cpu_ref_source(bundle_dir)
+            if _cpu_src is None:
+                raise RuntimeError("CPU reference source not found (kernel_generated.cpu.cpp or *.cpu.cpp)")
+            cpu_src = _cpu_src
             cpu_obj = obj_dir / "kernel_generated.cpu.o"
             cpu_cmd = [
                 args.cxx,
@@ -1367,7 +2561,9 @@ def main() -> int:
     print(f"gpu_binary_kind={bundle_config.get('gpu_binary_kind', 'embedded_cuda')}")
     print(f"gpu_binary_relpath={bundle_config.get('gpu_binary_relpath', '')}")
     print(f"gpu_binary_env_var={bundle_config.get('gpu_binary_env_var', '')}")
-    print(f"compiled_cuda_sources={len(cuda_sources)}")
+    print(f"compiled_cuda_sources={len(cuda_sources) if execution_backend not in ('cuda_clang_ir', 'cuda_vl_ir', 'program_json_ir', 'rocm_llvm') else 0}")
+    print(f"compiled_clang_ir_sources={compiled_clang_ir}")
+    print(f"compiled_vl_ir_sources={compiled_vl_ir}")
     print(f"compiled_rocm_bridge={compiled_rocm_bridge}")
     print(f"compiled_rocm_native={compiled_rocm_native}")
     print(f"compiled_rocm_clusters={len(rocm_cluster_indices)}")
@@ -1376,7 +2572,7 @@ def main() -> int:
     print(
         f"rocm_hipcc_opt_level={args.rocm_hipcc_opt_level if execution_backend == 'rocm_llvm' else ''}"
     )
-    print(f"compiled_circt_driver={1 if launch_backend == 'circt-cubin' else 0}")
+    print(f"compiled_circt_driver={1 if launch_backend == 'circt-cubin' and execution_backend not in ('cuda_clang_ir', 'cuda_vl_ir', 'program_json_ir') else 0}")
     print(f"compiled_cpu_ref={0 if args.skip_cpu_ref else 1}")
 
     if not args.run_smoke:
@@ -1388,11 +2584,14 @@ def main() -> int:
         binary_path,
         supports_sequential_steps=bool(bundle_config.get("supports_sequential_steps", True)),
     )
-    smoke_env: dict[str, str] | None = (
-        rocm_smoke_env
-        if execution_backend == "rocm_llvm"
-        else (_gpu_binary_env(bundle_dir, bundle_config) or None)
-    )
+    if execution_backend == "rocm_llvm":
+        smoke_env: dict[str, str] | None = rocm_smoke_env
+    elif execution_backend == "cuda_clang_ir":
+        smoke_env = clang_ir_smoke_env or None
+    elif execution_backend in ("cuda_vl_ir", "program_json_ir"):
+        smoke_env = vl_ir_smoke_env or None
+    else:
+        smoke_env = _gpu_binary_env(bundle_dir, bundle_config) or None
 
     off_log = smoke_log_dir / "smoke_off.log"
     off_log.write_text("", encoding="utf-8")

@@ -23,6 +23,13 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _resolve_repo_path(raw_path: str) -> Path:
+    path = Path(str(raw_path)).expanduser()
+    if not path.is_absolute():
+        path = ROOT_DIR / path
+    return path.resolve()
+
+
 def _import_baseline_module():
     spec = importlib.util.spec_from_file_location("slice_baseline", BASELINE_SCRIPT)
     if spec is None or spec.loader is None:
@@ -170,11 +177,11 @@ def main(argv: list[str]) -> int:
     rows: list[dict[str, Any]] = []
     for row in _selected_rows(index_payload, set(ns.slice)):
         slice_name = str(row.get("slice_name"))
-        template_path = Path(str(row.get("launch_template_path"))).expanduser().resolve()
+        template_path = _resolve_repo_path(str(row.get("launch_template_path")))
         template = _load_json(template_path)
         runner_args = dict(template.get("runner_args_template") or {})
-        rtl_path = Path(str(runner_args["rtl_path"])).expanduser().resolve()
-        tb_path = Path(str(runner_args["coverage_tb_path"])).expanduser().resolve()
+        rtl_path = _resolve_repo_path(str(runner_args["rtl_path"]))
+        tb_path = _resolve_repo_path(str(runner_args["coverage_tb_path"]))
         sources = baseline._collect_compile_sources(slice_name, rtl_path, tb_path)
         slice_out_dir = out_dir / slice_name
         cmd = [

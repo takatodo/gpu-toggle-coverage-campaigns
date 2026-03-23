@@ -6,4 +6,4 @@
 	url = https://github.com/llvm/circt.git
 [submodule "third_party/verilator"]
 	path = third_party/verilator
-	url = https://github.com/takatodo/verilator.git
+	url = https://github.com/verilator/verilator.git

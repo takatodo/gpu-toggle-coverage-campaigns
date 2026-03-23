@@ -94,7 +94,7 @@
     "campaign_gpu_nstates": 512,
     "campaign_sequential_rep_graph_mode": "never",
     "cases": 25000,
-    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/xbar_peri_coverage_regions.json",
+    "coverage_manifest_path": "third_party/rtlmeter/designs/OpenTitan/tests/xbar_peri_coverage_regions.json",
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
@@ -148,7 +148,7 @@
   "slice_name": "xbar_peri",
   "static_features": {
     "base_outputs_ready": true,
-    "coverage_manifest_path": "work/source_stage/OpenTitan/tests/xbar_peri_coverage_regions.json",
+    "coverage_manifest_path": "third_party/rtlmeter/designs/OpenTitan/tests/xbar_peri_coverage_regions.json",
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/xbar_peri_gpu_cov_tb.sv",
     "exclusive_word_count": 18,
     "exclusive_word_fraction": 1.0,
