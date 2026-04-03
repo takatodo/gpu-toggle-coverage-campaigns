@@ -15,14 +15,18 @@
  *
  * Usage:
  *   vlgpugen <merged.ll>                               # analysis only
- *   vlgpugen <merged.ll> --analyze-phases              # Phase B: ico/nba reachability
- *   vlgpugen <merged.ll> --storage-size=N --out=...    # generation
+ *   vlgpugen <merged.ll> --analyze-phases [--analyze-phases-json=path]
+ *                                                        # Phase B: ico/nba (+ optional JSON)
+ *   vlgpugen <merged.ll> --storage-size=N --out=... [--kernel-split=phases]
+ *            [--kernel-manifest-out=path]
+ *                                                        # optional phase batch kernels
  *
  * Build:
  *   make -C src/passes
  */
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -33,6 +37,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -40,9 +45,13 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
 #include <optional>
 #include <regex>
 #include <string>
+#include <utility>
+
+#include "llvm/ADT/ArrayRef.h"
 
 using namespace llvm;
 
@@ -55,10 +64,26 @@ static cl::opt<bool> AnalyzePhases(
     "analyze-phases",
     cl::desc("Phase B: report ___ico_sequent / ___nba_* reachability from eval, then exit"),
     cl::init(false));
+static cl::opt<std::string> AnalyzePhasesJson(
+    "analyze-phases-json",
+    cl::desc("With --analyze-phases, write machine-readable report to this path (UTF-8 JSON)"),
+    cl::value_desc("path"),
+    cl::init(""));
 static cl::opt<bool> NoDeclRuntimeMerge(
     "no-decl-runtime-merge",
     cl::desc("Phase E: disable decl-callee expansion of runtime function set (default: merge on)"),
     cl::init(false));
+static cl::opt<std::string> KernelSplit(
+    "kernel-split",
+    cl::desc("Generation: if 'phases', emit vl_ico_batch_gpu, vl_nba_comb_batch_gpu, "
+             "vl_nba_sequent_batch_gpu (lexicographic callee order) in addition to vl_eval_batch_gpu"),
+    cl::value_desc("mode"),
+    cl::init(""));
+static cl::opt<std::string> KernelManifestOut(
+    "kernel-manifest-out",
+    cl::desc("With --kernel-split=phases, write emitted split-kernel order to this path (UTF-8 JSON)"),
+    cl::value_desc("path"),
+    cl::init(""));
 
 static constexpr StringLiteral NVPTX_TRIPLE    = "nvptx64-nvidia-cuda";
 static constexpr StringLiteral NVPTX_DATALAYOUT = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64";
@@ -193,6 +218,499 @@ static void reportAnalyzePhases(Module &M, const DenseSet<Function *> &Reach) {
     }
 }
 
+static void writeJsonString(raw_ostream &OS, StringRef S) {
+    OS << '"';
+    for (unsigned char C : S) {
+        switch (C) {
+        case '"':
+            OS << "\\\"";
+            break;
+        case '\\':
+            OS << "\\\\";
+            break;
+        case '\b':
+            OS << "\\b";
+            break;
+        case '\f':
+            OS << "\\f";
+            break;
+        case '\n':
+            OS << "\\n";
+            break;
+        case '\r':
+            OS << "\\r";
+            break;
+        case '\t':
+            OS << "\\t";
+            break;
+        default:
+            if (C < 0x20) {
+                static const char *Hex = "0123456789abcdef";
+                OS << "\\u00" << Hex[(C >> 4) & 0xf] << Hex[C & 0xf];
+            } else {
+                OS << char(C);
+            }
+        }
+    }
+    OS << '"';
+}
+
+/// Phase B: JSON for tooling (kernel-split, CI). Requires --analyze-phases.
+static int writeAnalyzePhasesJson(Module &M, const DenseSet<Function *> &Reach, Function *EvalFn,
+                                  const std::string &Path) {
+    struct PhaseKey {
+        const char *Substr;
+        const char *JsonId;
+    };
+    static const PhaseKey Phases[] = {
+        {"___ico_sequent", "ico_sequent"},
+        {"___nba_comb", "nba_comb"},
+        {"___nba_sequent", "nba_sequent"},
+    };
+    const size_t NumPhases = sizeof(Phases) / sizeof(Phases[0]);
+
+    std::error_code EC;
+    raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+    if (EC) {
+        errs() << "error: cannot open --analyze-phases-json " << Path << ": " << EC.message()
+               << "\n";
+        return 1;
+    }
+
+    OS << "{\n";
+    OS << "  \"schema_version\": 1,\n  \"eval_function\": ";
+    writeJsonString(OS, EvalFn->getName());
+    OS << ",\n  \"phases\": {\n";
+
+    for (size_t Pi = 0; Pi < NumPhases; ++Pi) {
+        const char *Sub = Phases[Pi].Substr;
+        if (Pi > 0)
+            OS << ",\n";
+        OS << "    ";
+        writeJsonString(OS, Phases[Pi].JsonId);
+        OS << ": {\n      \"any_defined_in_module\": ";
+        bool AnyDef = false;
+        bool AnyReach = false;
+        SmallVector<std::pair<std::string, bool>, 8> Rows;
+        for (Function &F : M) {
+            if (F.isDeclaration())
+                continue;
+            if (!F.getName().contains(Sub))
+                continue;
+            AnyDef = true;
+            bool R = Reach.count(&F);
+            if (R)
+                AnyReach = true;
+            Rows.push_back({F.getName().str(), R});
+        }
+        OS << (AnyDef ? "true" : "false");
+        OS << ",\n      \"any_reachable_from_eval\": ";
+        OS << (AnyReach ? "true" : "false");
+        OS << ",\n      \"functions\": [";
+        for (unsigned i = 0; i < Rows.size(); ++i) {
+            if (i > 0)
+                OS << ',';
+            OS << "\n        {\"name\": ";
+            writeJsonString(OS, Rows[i].first);
+            OS << ", \"reachable\": " << (Rows[i].second ? "true" : "false") << "}";
+        }
+        OS << "\n      ]\n    }";
+    }
+    OS << "\n  }\n}\n";
+    OS.flush();
+    outs() << "analyze-phases-json: " << Path << "\n";
+    return 0;
+}
+
+struct KernelManifestEntry {
+    std::string Selector;
+    std::string KernelName;
+};
+
+static int writeKernelManifestJson(ArrayRef<KernelManifestEntry> Kernels, StringRef SplitMode,
+                                   const std::string &Path) {
+    std::error_code EC;
+    raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+    if (EC) {
+        errs() << "error: cannot open --kernel-manifest-out " << Path << ": "
+               << EC.message() << "\n";
+        return 1;
+    }
+
+    OS << "{\n";
+    OS << "  \"schema_version\": 1,\n";
+    OS << "  \"kernel_split\": ";
+    writeJsonString(OS, SplitMode);
+    OS << ",\n  \"kernels\": [";
+    for (size_t I = 0; I < Kernels.size(); ++I) {
+        if (I > 0)
+            OS << ',';
+        OS << "\n    {\"name\": ";
+        writeJsonString(OS, Kernels[I].KernelName);
+        OS << ", \"selector\": ";
+        writeJsonString(OS, Kernels[I].Selector);
+        OS << "}";
+    }
+    OS << "\n  ],\n  \"launch_sequence\": [";
+    for (size_t I = 0; I < Kernels.size(); ++I) {
+        if (I > 0)
+            OS << ',';
+        OS << "\n    ";
+        writeJsonString(OS, Kernels[I].KernelName);
+    }
+    OS << "\n  ]\n}\n";
+    OS.flush();
+    outs() << "kernel-manifest-json: " << Path << "\n";
+    return 0;
+}
+
+struct TriggerMaskTest {
+    GetElementPtrInst *TriggerPtr = nullptr;
+    IntegerType *LoadTy = nullptr;
+    APInt Mask = APInt(64, 0);
+    CmpInst::Predicate Predicate = CmpInst::ICMP_EQ;
+    Align LoadAlign = Align(1);
+};
+
+struct GuardedSegment {
+    TriggerMaskTest Guard;
+    SmallVector<BasicBlock *, 8> RegionBlocks;
+    Function *Callee = nullptr;
+    BasicBlock *JoinBlock = nullptr;
+    bool ExecuteOnTrue = false;
+};
+
+static Function *findReachableNamedFunction(Module &M, const DenseSet<Function *> &Reach,
+                                            StringRef NameSubstr) {
+    for (Function &F : M) {
+        if (F.isDeclaration())
+            continue;
+        if (!Reach.count(&F))
+            continue;
+        if (F.getName().contains(NameSubstr))
+            return &F;
+    }
+    return nullptr;
+}
+
+static bool isZeroIntConstant(const Value *V) {
+    if (auto *CI = dyn_cast<ConstantInt>(V))
+        return CI->isZero();
+    return false;
+}
+
+static bool parseTriggerMaskTest(Value *Cond, TriggerMaskTest &Out) {
+    auto *Cmp = dyn_cast<ICmpInst>(Cond);
+    if (!Cmp)
+        return false;
+    if (Cmp->getPredicate() != CmpInst::ICMP_EQ &&
+        Cmp->getPredicate() != CmpInst::ICMP_NE)
+        return false;
+
+    Value *Masked = nullptr;
+    if (isZeroIntConstant(Cmp->getOperand(0)))
+        Masked = Cmp->getOperand(1);
+    else if (isZeroIntConstant(Cmp->getOperand(1)))
+        Masked = Cmp->getOperand(0);
+    else
+        return false;
+
+    auto *And = dyn_cast<BinaryOperator>(Masked);
+    if (!And || And->getOpcode() != Instruction::And)
+        return false;
+
+    Value *MaskV = And->getOperand(0);
+    Value *LoadV = And->getOperand(1);
+    if (!isa<ConstantInt>(MaskV))
+        std::swap(MaskV, LoadV);
+    auto *MaskC = dyn_cast<ConstantInt>(MaskV);
+    auto *Load = dyn_cast<LoadInst>(LoadV);
+    if (!MaskC || !Load)
+        return false;
+    auto *LoadTy = dyn_cast<IntegerType>(Load->getType());
+    if (!LoadTy)
+        return false;
+
+    auto *TriggerPtr = dyn_cast<GetElementPtrInst>(Load->getPointerOperand());
+    if (!TriggerPtr || !TriggerPtr->hasAllConstantIndices())
+        return false;
+    if (!isa<Argument>(TriggerPtr->getPointerOperand()))
+        return false;
+
+    Out.TriggerPtr = TriggerPtr;
+    Out.LoadTy = LoadTy;
+    Out.Mask = MaskC->getValue();
+    Out.Predicate = Cmp->getPredicate();
+    Out.LoadAlign = Load->getAlign();
+    return true;
+}
+
+static bool isTrivialReturnBlock(BasicBlock *BB) {
+    auto *Ret = dyn_cast<ReturnInst>(BB->getTerminator());
+    if (!Ret)
+        return false;
+    for (Instruction &I : *BB) {
+        if (&I == Ret)
+            continue;
+        return false;
+    }
+    return true;
+}
+
+static bool matchSingleCallBlock(BasicBlock *BB, BasicBlock *ExpectedNext, Function *&CalleeOut) {
+    auto *Br = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!Br || Br->isConditional() || Br->getSuccessor(0) != ExpectedNext)
+        return false;
+
+    Function *Callee = nullptr;
+    for (Instruction &I : *BB) {
+        if (&I == Br)
+            continue;
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || Callee)
+            return false;
+        auto *Fn = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+        if (!Fn || Fn->isDeclaration())
+            return false;
+        Callee = Fn;
+    }
+    if (!Callee)
+        return false;
+    CalleeOut = Callee;
+    return true;
+}
+
+static bool collectRegionBlocks(BasicBlock *Start, BasicBlock *Join, BasicBlock *EntryPred,
+                                SmallVectorImpl<BasicBlock *> &Order) {
+    SmallVector<BasicBlock *, 8> Stack;
+    SmallPtrSet<BasicBlock *, 16> RegionSet;
+    Stack.push_back(Start);
+
+    while (!Stack.empty()) {
+        BasicBlock *BB = Stack.pop_back_val();
+        if (BB == Join)
+            continue;
+        if (!RegionSet.insert(BB).second)
+            continue;
+        auto *TI = BB->getTerminator();
+        for (unsigned I = 0; I < TI->getNumSuccessors(); ++I)
+            Stack.push_back(TI->getSuccessor(I));
+    }
+
+    if (RegionSet.empty())
+        return false;
+
+    bool HasExitToJoin = false;
+    Function *Parent = Start->getParent();
+    for (BasicBlock &BB : *Parent) {
+        if (!RegionSet.count(&BB))
+            continue;
+
+        if (&BB == Start) {
+            for (BasicBlock *Pred : predecessors(&BB))
+                if (Pred != EntryPred && !RegionSet.count(Pred))
+                    return false;
+        } else {
+            for (BasicBlock *Pred : predecessors(&BB))
+                if (!RegionSet.count(Pred))
+                    return false;
+        }
+
+        auto *TI = BB.getTerminator();
+        for (unsigned I = 0; I < TI->getNumSuccessors(); ++I) {
+            BasicBlock *Succ = TI->getSuccessor(I);
+            if (Succ == Join) {
+                HasExitToJoin = true;
+                continue;
+            }
+            if (!RegionSet.count(Succ))
+                return false;
+        }
+
+        Order.push_back(&BB);
+    }
+
+    return HasExitToJoin;
+}
+
+static bool regionUsesOnlyRootArg(const SmallVectorImpl<BasicBlock *> &RegionBlocks,
+                                  Argument *RootArg) {
+    SmallPtrSet<const Instruction *, 32> RegionInsts;
+    for (BasicBlock *BB : RegionBlocks)
+        for (Instruction &I : *BB)
+            RegionInsts.insert(&I);
+
+    for (BasicBlock *BB : RegionBlocks) {
+        for (Instruction &I : *BB) {
+            for (Value *Op : I.operands()) {
+                if (isa<Constant>(Op) || isa<BasicBlock>(Op))
+                    continue;
+                if (Op == RootArg)
+                    continue;
+                auto *Inst = dyn_cast<Instruction>(Op);
+                if (Inst && RegionInsts.count(Inst))
+                    continue;
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+static bool matchGuardedRegion(BasicBlock *ActiveBB, BasicBlock *JoinBB, BasicBlock *EntryPred,
+                               GuardedSegment &OutSeg) {
+    SmallVector<BasicBlock *, 8> RegionBlocks;
+    if (!collectRegionBlocks(ActiveBB, JoinBB, EntryPred, RegionBlocks))
+        return false;
+    if (!regionUsesOnlyRootArg(RegionBlocks, &*ActiveBB->getParent()->arg_begin()))
+        return false;
+
+    Function *Callee = nullptr;
+    if (RegionBlocks.size() == 1 && matchSingleCallBlock(ActiveBB, JoinBB, Callee))
+        OutSeg.Callee = Callee;
+    OutSeg.RegionBlocks = std::move(RegionBlocks);
+    OutSeg.JoinBlock = JoinBB;
+    return true;
+}
+
+static bool extractGuardedSegments(Function &EvalNba,
+                                   SmallVectorImpl<GuardedSegment> &Out) {
+    BasicBlock *Cur = &EvalNba.getEntryBlock();
+    SmallPtrSet<BasicBlock *, 16> Seen;
+
+    while (true) {
+        if (!Seen.insert(Cur).second)
+            return false;
+        if (isTrivialReturnBlock(Cur))
+            return !Out.empty();
+
+        auto *Br = dyn_cast<BranchInst>(Cur->getTerminator());
+        if (!Br || !Br->isConditional())
+            return false;
+
+        TriggerMaskTest Guard;
+        if (!parseTriggerMaskTest(Br->getCondition(), Guard))
+            return false;
+
+        BasicBlock *TrueBB = Br->getSuccessor(0);
+        BasicBlock *FalseBB = Br->getSuccessor(1);
+        BasicBlock *Next = nullptr;
+        GuardedSegment Seg;
+        Seg.Guard = Guard;
+
+        if (matchGuardedRegion(TrueBB, FalseBB, Cur, Seg)) {
+            Next = FalseBB;
+            Seg.ExecuteOnTrue = true;
+        } else if (matchGuardedRegion(FalseBB, TrueBB, Cur, Seg)) {
+            Next = TrueBB;
+            Seg.ExecuteOnTrue = false;
+        } else {
+            return false;
+        }
+
+        Out.push_back(std::move(Seg));
+        Cur = Next;
+    }
+}
+
+static Value *cloneConstantIndexGEP(IRBuilder<> &B, GetElementPtrInst *GEP, Value *BasePtr) {
+    SmallVector<Value *, 8> Indices;
+    for (unsigned I = 1; I < GEP->getNumOperands(); ++I) {
+        auto *Idx = dyn_cast<ConstantInt>(GEP->getOperand(I));
+        if (!Idx)
+            return nullptr;
+        Indices.push_back(Idx);
+    }
+    return GEP->isInBounds()
+               ? B.CreateInBoundsGEP(GEP->getSourceElementType(), BasePtr, Indices, "trigger_gep")
+               : B.CreateGEP(GEP->getSourceElementType(), BasePtr, Indices, "trigger_gep");
+}
+
+static Function *createGuardedSegmentWrapper(Module &M, StringRef WrapperName,
+                                             const GuardedSegment &Seg) {
+    LLVMContext &Ctx = M.getContext();
+    auto *PtrTy = cast<PointerType>(Seg.Guard.TriggerPtr->getPointerOperand()->getType());
+    auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), {PtrTy}, false);
+    auto *Wrapper =
+        Function::Create(FTy, GlobalValue::InternalLinkage, WrapperName, &M);
+    Wrapper->getArg(0)->setName("state_ptr");
+
+    auto *EntryBB = BasicBlock::Create(Ctx, "entry", Wrapper);
+    auto *ExitBB = BasicBlock::Create(Ctx, "exit", Wrapper);
+
+    IRBuilder<> B(EntryBB);
+    Value *TriggerPtr = cloneConstantIndexGEP(B, Seg.Guard.TriggerPtr, Wrapper->getArg(0));
+    if (!TriggerPtr) {
+        Wrapper->eraseFromParent();
+        return nullptr;
+    }
+    auto *Load = B.CreateAlignedLoad(Seg.Guard.LoadTy, TriggerPtr, Seg.Guard.LoadAlign, "trigger");
+    auto *Masked =
+        B.CreateAnd(Load, ConstantInt::get(Seg.Guard.LoadTy, Seg.Guard.Mask), "trigger_masked");
+    auto *Zero = ConstantInt::get(Seg.Guard.LoadTy, 0);
+    auto *Cond = B.CreateICmp(Seg.Guard.Predicate, Masked, Zero, "trigger_cond");
+    if (Seg.Callee && Seg.RegionBlocks.size() == 1) {
+        auto *CallBB = BasicBlock::Create(Ctx, "call", Wrapper);
+        if (Seg.ExecuteOnTrue)
+            B.CreateCondBr(Cond, CallBB, ExitBB);
+        else
+            B.CreateCondBr(Cond, ExitBB, CallBB);
+
+        B.SetInsertPoint(CallBB);
+        B.CreateCall(Seg.Callee, {Wrapper->getArg(0)});
+        B.CreateBr(ExitBB);
+    } else {
+        ValueToValueMapTy VMap;
+        DenseMap<BasicBlock *, BasicBlock *> BBMap;
+        VMap[&*Seg.RegionBlocks.front()->getParent()->arg_begin()] = Wrapper->getArg(0);
+        for (BasicBlock *OrigBB : Seg.RegionBlocks) {
+            auto *CloneBB = CloneBasicBlock(OrigBB, VMap, ".seg", Wrapper);
+            VMap[OrigBB] = CloneBB;
+            BBMap[OrigBB] = CloneBB;
+        }
+
+        BasicBlock *StartBB = BBMap[Seg.RegionBlocks.front()];
+        if (Seg.ExecuteOnTrue)
+            B.CreateCondBr(Cond, StartBB, ExitBB);
+        else
+            B.CreateCondBr(Cond, ExitBB, StartBB);
+
+        for (BasicBlock *OrigBB : Seg.RegionBlocks) {
+            BasicBlock *CloneBB = BBMap[OrigBB];
+            for (Instruction &I : *CloneBB)
+                RemapInstruction(&I, VMap,
+                                 RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+            auto *OrigBr = dyn_cast<BranchInst>(OrigBB->getTerminator());
+            auto *CloneBr = dyn_cast<BranchInst>(CloneBB->getTerminator());
+            if (!OrigBr || !CloneBr) {
+                Wrapper->eraseFromParent();
+                return nullptr;
+            }
+
+            IRBuilder<> BodyB(CloneBB);
+            if (OrigBr->isConditional()) {
+                Value *CloneCond = CloneBr->getCondition();
+                CloneBr->eraseFromParent();
+                auto mapSucc = [&](BasicBlock *Succ) -> BasicBlock * {
+                    return Succ == Seg.JoinBlock ? ExitBB : BBMap[Succ];
+                };
+                BodyB.CreateCondBr(CloneCond, mapSucc(OrigBr->getSuccessor(0)),
+                                   mapSucc(OrigBr->getSuccessor(1)));
+            } else {
+                CloneBr->eraseFromParent();
+                BasicBlock *Succ = OrigBr->getSuccessor(0);
+                BodyB.CreateBr(Succ == Seg.JoinBlock ? ExitBB : BBMap[Succ]);
+            }
+        }
+    }
+
+    B.SetInsertPoint(ExitBB);
+    B.CreateRetVoid();
+    return Wrapper;
+}
+
 static void collectReachable(Function *Root, DenseSet<Function *> &Out) {
     SmallVector<Function *, 64> Stack;
     Stack.push_back(Root);
@@ -228,8 +746,24 @@ static void stubFunction(Function &F) {
 }
 
 // ---------------------------------------------------------------------------
-// Generation: @fake_syms_buf + @vl_eval_batch_gpu kernel wrapper
+// Generation: @fake_syms_buf + batch GPU kernels (eval + optional phase split)
 // ---------------------------------------------------------------------------
+
+static void collectPhaseReachable(Module &M, const DenseSet<Function *> &Reach,
+                                  StringRef NameSubstr, SmallVectorImpl<Function *> &Out) {
+    for (Function &F : M) {
+        if (F.isDeclaration())
+            continue;
+        if (!F.getName().contains(NameSubstr))
+            continue;
+        if (!Reach.count(&F))
+            continue;
+        Out.push_back(&F);
+    }
+    llvm::sort(Out, [](const Function *A, const Function *B) {
+        return A->getName() < B->getName();
+    });
+}
 
 static GlobalVariable *injectFakeSymsBuf(Module &M) {
     auto *ArrTy = ArrayType::get(Type::getInt8Ty(M.getContext()), 4096);
@@ -240,8 +774,10 @@ static GlobalVariable *injectFakeSymsBuf(Module &M) {
     return GV;
 }
 
-static void injectKernelWrapper(Module &M, Function *EvalFn, uint64_t Storage,
-                                 std::optional<int64_t> VlSymsOff, GlobalVariable *FakeSymsBuf) {
+/// One NVPTX kernel: for each active thread, optionally store fake vlSyms, then call each Callee(state_ptr).
+static void injectBatchKernel(Module &M, StringRef KernelName, ArrayRef<Function *> Callees,
+                              uint64_t Storage, std::optional<int64_t> VlSymsOff,
+                              GlobalVariable *FakeSymsBuf) {
     LLVMContext &Ctx = M.getContext();
     Type *I8Ty  = Type::getInt8Ty(Ctx);
     Type *I32Ty = Type::getInt32Ty(Ctx);
@@ -255,7 +791,7 @@ static void injectKernelWrapper(Module &M, Function *EvalFn, uint64_t Storage,
 
     auto *Kernel = Function::Create(
         FunctionType::get(Type::getVoidTy(Ctx), {PtrTy, I32Ty}, false),
-        GlobalValue::ExternalLinkage, "vl_eval_batch_gpu", &M);
+        GlobalValue::ExternalLinkage, KernelName, &M);
     Kernel->getArg(0)->setName("storage_base");
     Kernel->getArg(1)->setName("nstates");
 
@@ -280,7 +816,8 @@ static void injectKernelWrapper(Module &M, Function *EvalFn, uint64_t Storage,
             B.CreateGEP(I8Ty, StatePtr, {ConstantInt::get(I64Ty, *VlSymsOff)},
                         "vlsyms_gep", true),
             Align(8));
-    B.CreateCall(EvalFn, {StatePtr});
+    for (Function *Callee : Callees)
+        B.CreateCall(Callee, {StatePtr});
     B.CreateBr(ExitBB);
 
     B.SetInsertPoint(ExitBB);
@@ -302,6 +839,14 @@ int main(int argc, char **argv) {
         "vlgpugen — Verilator merged.ll → NVPTX GPU kernel generator\n");
 
     if (InputFilename.empty()) { errs() << "error: no input .ll file\n"; return 1; }
+    if (!AnalyzePhasesJson.empty() && !AnalyzePhases) {
+        errs() << "error: --analyze-phases-json requires --analyze-phases\n";
+        return 1;
+    }
+    if (!KernelManifestOut.empty() && KernelSplit != "phases") {
+        errs() << "error: --kernel-manifest-out requires --kernel-split=phases\n";
+        return 1;
+    }
 
     auto BufOr = MemoryBuffer::getFile(InputFilename);
     if (!BufOr) { errs() << "error: " << BufOr.getError().message() << "\n"; return 1; }
@@ -330,6 +875,10 @@ int main(int argc, char **argv) {
 
     if (AnalyzePhases) {
         reportAnalyzePhases(*M, Reach);
+        if (!AnalyzePhasesJson.empty()) {
+            if (writeAnalyzePhasesJson(*M, Reach, EvalFn, AnalyzePhasesJson))
+                return 1;
+        }
         return 0;
     }
 
@@ -352,6 +901,10 @@ int main(int argc, char **argv) {
 
     // ── generation mode ───────────────────────────────────────────────────
     if (StorageSize == 0) { errs() << "error: --storage-size required with --out\n"; return 1; }
+    if (!KernelSplit.empty() && KernelSplit != "phases") {
+        errs() << "error: --kernel-split must be empty or 'phases' (got '" << KernelSplit << "')\n";
+        return 1;
+    }
 
     // Remove GlobalAliases (ctor/dtor aliases become invalid after deleteBody)
     SmallVector<GlobalAlias *, 16> Aliases;
@@ -400,7 +953,71 @@ int main(int argc, char **argv) {
     M->setTargetTriple(NVPTX_TRIPLE);
     M->setDataLayout(NVPTX_DATALAYOUT);
 
-    injectKernelWrapper(*M, EvalFn, StorageSize, VlOff, FakeSymsBuf);
+    injectBatchKernel(*M, "vl_eval_batch_gpu", ArrayRef(&EvalFn, 1), StorageSize, VlOff,
+                      FakeSymsBuf);
+
+    if (KernelSplit == "phases") {
+        SmallVector<KernelManifestEntry, 8> Manifest;
+
+        SmallVector<Function *, 8> IcoFns;
+        collectPhaseReachable(*M, Reach, "___ico_sequent", IcoFns);
+        injectBatchKernel(*M, "vl_ico_batch_gpu", IcoFns, StorageSize, VlOff, FakeSymsBuf);
+        Manifest.push_back({"___ico_sequent", "vl_ico_batch_gpu"});
+
+        bool UsedGuardedSegments = false;
+        if (Function *EvalNba = findReachableNamedFunction(*M, Reach, "___eval_nba")) {
+            SmallVector<GuardedSegment, 8> Segments;
+            if (extractGuardedSegments(*EvalNba, Segments)) {
+                UsedGuardedSegments = true;
+                for (unsigned I = 0; I < Segments.size(); ++I) {
+                    std::string WrapperName = "__vlgpu_nba_seg" + std::to_string(I) + "_wrapper";
+                    Function *Wrapper = createGuardedSegmentWrapper(*M, WrapperName, Segments[I]);
+                    if (!Wrapper) {
+                        UsedGuardedSegments = false;
+                        break;
+                    }
+                    std::string KernelName = "vl_nba_seg" + std::to_string(I) + "_batch_gpu";
+                    Function *WrapperArr[] = {Wrapper};
+                    injectBatchKernel(*M, KernelName, WrapperArr, StorageSize, VlOff, FakeSymsBuf);
+                    std::string Selector;
+                    if (Segments[I].Callee)
+                        Selector =
+                            "___eval_nba_guarded_helper:" + Segments[I].Callee->getName().str();
+                    else
+                        Selector = "___eval_nba_inline_region:seg" + std::to_string(I);
+                    Manifest.push_back({Selector, KernelName});
+                }
+                if (!UsedGuardedSegments)
+                    while (Manifest.size() > 1)
+                        Manifest.pop_back();
+            }
+        }
+
+        if (!UsedGuardedSegments) {
+            static const KernelManifestEntry LegacyNbaKernels[] = {
+                {"___nba_comb", "vl_nba_comb_batch_gpu"},
+                {"___nba_sequent", "vl_nba_sequent_batch_gpu"},
+            };
+            for (auto &PK : LegacyNbaKernels) {
+                SmallVector<Function *, 8> Fs;
+                collectPhaseReachable(*M, Reach, PK.Selector, Fs);
+                injectBatchKernel(*M, PK.KernelName, Fs, StorageSize, VlOff, FakeSymsBuf);
+                Manifest.push_back(PK);
+            }
+        }
+
+        if (!KernelManifestOut.empty())
+            if (int RC = writeKernelManifestJson(Manifest, "phases",
+                                                 KernelManifestOut))
+                return RC;
+        if (!Quiet)
+            if (UsedGuardedSegments)
+                outs() << "kernel-split=phases: vl_ico_batch_gpu + guarded eval_nba segments "
+                          "(plus vl_eval_batch_gpu)\n";
+            else
+                outs() << "kernel-split=phases: vl_ico_batch_gpu, vl_nba_comb_batch_gpu, "
+                          "vl_nba_sequent_batch_gpu (plus vl_eval_batch_gpu)\n";
+    }
 
     std::error_code EC;
     raw_fd_ostream OS(OutFile, EC);

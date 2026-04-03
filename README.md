@@ -65,7 +65,8 @@ config/
 └── slice_launch_templates/ OpenTitan TLUL slice JSON templates
 
 docs/
-└── phase_b_ico_nba_spike.md  Phase B notes (ico/nba multi-kernel direction)
+├── phase_b_ico_nba_spike.md  Phase B notes (ico/nba multi-kernel direction)
+└── roadmap_tasks.md          Goal-to-task breakdown and current priorities
 
 third_party/
 ├── rtlmeter/   takatodo/rtlmeter fork, feature/gpu-cov (gpu_cov + gpu_cov_gate designs)
@@ -114,8 +115,28 @@ rtlmeter/venv/bin/pip install -r rtlmeter/python-requirements.txt
 ```bash
 # Stock Verilator → cubin (recommended)
 python3 src/tools/build_vl_gpu.py <path-to-verilator--cc-output-dir> [--sm sm_89]
-# Phase B: print ___ico_sequent / ___nba_* reachability after merged.ll, then continue to cubin:
+# Phase B: print ___ico_sequent / ___nba_* reachability after merged.ll, then continue to cubin;
+#   also writes <mdir>/vl_phase_analysis.json (machine-readable). Example:
 #   python3 src/tools/build_vl_gpu.py <mdir> --analyze-phases
+# Phase B multi-kernel: build_vl_gpu.py --kernel-split-phases → meta launch_sequence; run_vl_hybrid.py --mdir chains kernels per step.
+#   Split builds also write <mdir>/vl_kernel_manifest.json; meta launch_sequence is copied from that manifest.
+# Phase B compare harness: compare single vl_eval_batch_gpu vs phase-split launch_sequence;
+#   JSON includes raw-byte mismatch counts, root-field annotations from *_root.h,
+#   final-state acceptance policies, and per-prefix delta summaries (`delta_from_previous_prefix`,
+#   `first_*_delta_*`); prefix comparisons are diagnostic only:
+#   python3 src/tools/compare_vl_hybrid_modes.py <mdir> --json-out <out.json> [--dump-dir <dir>]
+#   Current state (2026-04-03): both helper-only (`tlul_socket_m1`) and helper+inline
+#   (`tlul_request_loopback`) `_eval_nba` designs can now be replayed as guarded `vl_nba_seg*`
+#   kernels via `vl_kernel_manifest.json`. Both reference designs now reach internal-only final
+#   mismatch (the compare policy `ignore_verilator_internal_final_state` passes for both), and
+#   that result still holds at least through `--nstates 256 --steps 3`.
+#   The open question is whether to chase `strict_final_state` parity or move effort to the CPU slice.
+#   python3 src/tools/compare_vl_hybrid_modes.py <mdir> --nstates 1 --json-out <out.json>  # easier-to-read mismatch counts
+#   python3 src/tools/compare_vl_hybrid_modes.py <mdir> --acceptance-policy ignore_verilator_internal_final_state
+# Phase B writer trace: map mismatch fields back to generated Verilator phase functions:
+#   python3 src/tools/trace_vl_field_writers.py <mdir> <field> [<field> ...] --json-out <out.json>
+# Phase B IR store trace: map those phase functions down to concrete LLVM store sites for the selected fields:
+#   python3 src/tools/trace_vl_ir_stores.py <mdir> <mangled-function> [<mangled-function> ...] --fields <field> [<field> ...] --json-out <out.json>
 # Headers should match the Verilator that generated mdir: default include is third_party/verilator/include;
 # set VERILATOR_ROOT or VL_INCLUDE to override (see build_vl_gpu.verilator_include_dir). Emit-LLVM uses -std=c++20.
 
@@ -130,6 +151,25 @@ python3 src/tools/run_vl_hybrid.py --mdir <same-verilator-cc-dir> [--nstates N] 
 # After a full run, ./quickstart_hybrid.sh --fast reuses cubin + skips submodule/git and make when up to date.
 # ./quickstart_hybrid.sh --analyze-phases forwards Phase B reporting into build_vl_gpu.py.
 # Step 7 defaults to --nstates 256 (not 4096) to keep GPU launch light; use --nstates 4096 or --lite (64) as needed.
+# First supported socket_m1 flow: quickstart host probe -> GPU handoff on the guarded-segment build.
+./quickstart_hybrid.sh --mdir work/vl_ir_exp/socket_m1_vl --socket-m1-host-gpu-flow --lite
+
+# Phase C host probe: build a stock-Verilator host binary for tlul_socket_m1 and prove
+# constructor / vlSymsp / reset wiring against generated C++ output.
+python3 src/tools/run_socket_m1_host_probe.py --mdir work/vl_ir_exp/socket_m1_vl
+# Optional artifact:
+#   --json-out work/vl_ir_exp/socket_m1_vl/socket_m1_host_probe_report.json
+# Supported clock source (2026-04-03): the generated tlul_socket_m1_gpu_cov_tb still contains a
+# timed clock coroutine (`always #5 clk_i = ~clk_i`), and the first supported socket_m1 flow now
+# intentionally keeps that TB-owned clock instead of blocking on a thinner host-driven top.
+
+# Supported Phase C/D glue for the first target: run the host probe, dump one raw root image,
+# upload it as the GPU init-state, then summarize the first state's done/signature/toggle outputs.
+python3 src/tools/run_socket_m1_host_gpu_flow.py --mdir work/vl_ir_exp/socket_m1_vl --nstates 64 --steps 1
+
+# Supported stock-hybrid validation runner: wraps the same socket_m1 flow in a stable JSON schema
+# with host probe status, toggle bitmap summary, and GPU timing metrics.
+python3 src/runners/run_socket_m1_stock_hybrid_validation.py --mdir work/vl_ir_exp/socket_m1_vl --nstates 64 --steps 1
 
 # VeeR family (legacy RTLMeter + sim-accel backends) — outputs to work/
 python3 src/runners/run_veer_family_gpu_toggle_validation.py
@@ -187,12 +227,12 @@ RTL (SystemVerilog)
                                            cubin
 ```
 
-**Status (2026-03-23):**
+**Status (2026-03-23, `tlul_socket_m1` storage_size rechecked locally on 2026-03-28):**
 
 | Slice | storage_size | cubin | ns/state/cycle (65K states) |
 |----------|-------------|-------|-----------------------------|
 | tlul_request_loopback | 192 bytes | ✓ | ~2.6 ns |
-| tlul_socket_m1 | 2048 bytes | ✓ | ~13.5 ns |
+| tlul_socket_m1 | 2112 bytes | ✓ | ~13.5 ns |
 
 **Convergence loop and runtime safety:**
 
@@ -218,7 +258,7 @@ stays true and the convergence loop never terminates.
 | Combinational loops | ✗ | ✓ |
 | UVM | ✗ | ✓ |
 | tlul_socket_m1 | ✗ (blocked on firmem) | ✓ (cubin built and run) |
-| Storage size | 156 bytes (loopback) | 192 bytes (loopback), 2048 bytes (socket_m1) |
+| Storage size | 156 bytes (loopback) | 192 bytes (loopback), 2112 bytes (socket_m1) |
 | Extern stubs | not required | `VL_FATAL_MT` + VerilatedSyms-related |
 
 **Files:**
@@ -360,10 +400,12 @@ verilator --cc --flatten
 | Phase | What exists / what to build | Outcome |
 |-------|-----------------------------|---------|
 | **A — done** | `build_vl_gpu.py`: Verilator `--cc` → `.ll` → **`vlgpugen`** → `opt` + `VlGpuPasses.so` → cubin | Single **batch `_eval`** kernel over many states (AoS); runtime/host calls stubbed; `VlPatchConvergence` for `--no-timing` TB loops |
-| **B** | **Timestep / phase fidelity:** align GPU execution with RTL time steps (multi-`eval`, ico/nba ordering, or explicit sched) where one batched `_eval` is insufficient | Reduces semantic gap vs event-driven RTL sim; may require IR slicing or multi-kernel launch |
-| **C** | **CPU slice:** compile non-kernel functions with normal `clang++` (init, monitors, DPI hooks, assertion bodies) into a **host** binary; define a narrow ABI (storage layout, syms, toggle bitmap) | Host does constructors, reset sequencing, optional single-step debug path |
-| **D** | **Hybrid driver:** one process loads **host .so/.exe + cubin**; drives `clk`/`rst` on CPU, copies or maps state, launches GPU kernels per batch, **pulls toggle bits** back | End-to-end toggle campaign without sim-accel; replaces ad-hoc `bench_vl_sweep.cu`-style harnesses |
-| **E** | **Automatic GPU/CPU classification:** static analysis on Verilator IR (or LLVM) to mark safe GPU regions vs must-stay-on-host (I/O, time, `$display`) | Scales beyond hand-tuned `is_runtime` lists |
+| **B — partial** | `vlgpugen --analyze-phases`, manifest-driven guarded `vl_nba_seg*` kernels, `build_vl_gpu.py --kernel-split-phases`, compare tooling, and `run_vl_hybrid.py` launch sequencing exist; both reference designs now pass the provisional final-state gate, including `nstates=256, steps=3` compare runs | Reduces semantic gap vs event-driven RTL sim; remaining work is strict-parity judgment and CPU-slice handoff |
+| **C — supported (first target)** | `src/hybrid/host_abi.h` and `docs/phase_c_socket_m1_host_abi.md` pin the first target ABI (`tlul_socket_m1`), `src/tools/run_socket_m1_host_probe.py` proves constructor / `vlSymsp` / reset behavior against generated C++ output, and `src/tools/run_socket_m1_host_gpu_flow.py` plus `./quickstart_hybrid.sh --socket-m1-host-gpu-flow` provide the first supported host->GPU handoff. The supported clock source is the timed coroutine already embedded in `tlul_socket_m1_gpu_cov_tb` | One stock-Verilator design now has a supported construction/reset/handoff path; future refinement is a thinner host-driven top, not a blocker for the first flow |
+| **D — minimal implemented** | CUDA Driver stub loads `cubin`, supports repeated `--steps`, optional patches, and honors `launch_sequence` from `vl_batch_gpu.meta.json`; `src/runners/run_socket_m1_stock_hybrid_validation.py` emits a stable validation JSON for the first supported target | End-to-end toggle campaign without sim-accel; replaces ad-hoc `bench_vl_sweep.cu`-style harnesses |
+| **E — prototype** | `vlgpugen` already merges CallGraph hints with `isRuntimeFunction`, but the classifier is still heuristic and not yet regression-audited | Scales beyond hand-tuned `is_runtime` lists |
+
+Concrete task tracker: [docs/roadmap_tasks.md](docs/roadmap_tasks.md). Phase C ABI draft for the first supported target: [docs/phase_c_socket_m1_host_abi.md](docs/phase_c_socket_m1_host_abi.md).
 
 **Phase D (minimal, implemented):** after `build_vl_gpu.py`, `vl_batch_gpu.meta.json` records `cubin`, `storage_size`, `sm`, `schema_version`. Build and run the CUDA Driver stub:
 
@@ -372,7 +414,7 @@ make -C src/hybrid    # produces src/hybrid/run_vl_hybrid (needs CUDA headers + 
 python3 src/tools/run_vl_hybrid.py --mdir <verilator-cc-dir> [--nstates 4096]
 ```
 
-This loads `vl_batch_gpu.cubin`, zero-fills device storage (`nstates * storage_size`), and launches `@vl_eval_batch_gpu` (grid/block layout matches the LLVM kernel). Use **`--steps`** and **`--patch global_offset:byte`** on `run_vl_hybrid.py` to repeat launches with host-injected bytes (minimal CPU time axis). No full CPU-side Verilator link yet — see `src/hybrid/host_abi.h` and `make host_stub`.
+This loads `vl_batch_gpu.cubin`, zero-fills device storage (`nstates * storage_size`), and launches `@vl_eval_batch_gpu` (grid/block layout matches the LLVM kernel). Use **`--steps`** and **`--patch global_offset:byte`** on `run_vl_hybrid.py` to repeat launches with host-injected bytes (minimal CPU time axis), or **`--init-state path.bin`** to seed device memory from a host-generated raw root image. The first checked-in CPU-side proof is `src/tools/run_socket_m1_host_probe.py`; the first supported host->GPU handoff is `src/tools/run_socket_m1_host_gpu_flow.py`; `./quickstart_hybrid.sh --socket-m1-host-gpu-flow` is the first supported entrypoint for that path; and `src/runners/run_socket_m1_stock_hybrid_validation.py` is the first stable validation runner. See `src/hybrid/host_abi.h` and `docs/phase_c_socket_m1_host_abi.md`.
 
 **Per-launch cost:** one launch = one `_eval` per `nstates` slot; time ~ **(_eval work) × nstates × steps** (design-dependent, not “one cycle”). Lighten with smaller `--cc` / TB, lower `--nstates` / `--steps`, or `--lite`; profile with `nsys` if needed. **Shorter `_eval` IR:** `build_vl_gpu.py --clang-O O3` (or `quickstart_hybrid.sh --fast-sim`) re-emits `.ll` with heavier clang opt; rebuild with `--force` or change opt level (tracked via `mdir/.vl_gpu_clang_opt`).
 

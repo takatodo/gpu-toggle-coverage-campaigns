@@ -1,6 +1,9 @@
 /**
  * run_vl_hybrid.c — Phase-D host: load cubin, optional per-step HtoD patches, repeat launch.
  *
+ * If RUN_VL_HYBRID_KERNELS is set (comma-separated names), each step launches that sequence
+ * instead of a single vl_eval_batch_gpu (see vl_batch_gpu.meta.json launch_sequence).
+ *
  * Usage:
  *   ./run_vl_hybrid <cubin> <storage_bytes> <nstates> [block] [steps] [patch ...]
  *
@@ -19,6 +22,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+/* Comma-separated kernel names; Verilator phase order (see vl_batch_gpu.meta.json launch_sequence). */
+#define ENV_KERNEL_CHAIN "RUN_VL_HYBRID_KERNELS"
+#define MAX_KERNEL_CHAIN 16
+
+/* Optional binary dump of device storage after the last launch sequence. */
+#define ENV_DUMP_STATE "RUN_VL_HYBRID_DUMP_STATE"
+/* Optional raw state image copied into device storage before patches/launches. */
+#define ENV_INIT_STATE "RUN_VL_HYBRID_INIT_STATE"
 
 /* Set to force one cuCtxSynchronize per step (slower wall clock; old behavior). */
 #define ENV_SYNC_EACH_STEP "RUN_VL_HYBRID_SYNC_EACH_STEP"
@@ -162,12 +174,109 @@ int main(int argc, char **argv) {
   CUmodule mod;
   CUDA_CHECK(cuModuleLoad(&mod, cubin_path));
 
-  CUfunction kfn;
-  CUDA_CHECK(cuModuleGetFunction(&kfn, mod, "vl_eval_batch_gpu"));
+  CUfunction kfns[MAX_KERNEL_CHAIN];
+  int nk = 0;
+  const char *kchain = getenv(ENV_KERNEL_CHAIN);
+  if (kchain && kchain[0] != '\0') {
+    char *buf = strdup(kchain);
+    if (!buf) {
+      fprintf(stderr, "strdup failed\n");
+      return 1;
+    }
+    for (char *tok = strtok(buf, ","); tok != NULL; tok = strtok(NULL, ",")) {
+      while (*tok == ' ' || *tok == '\t')
+        tok++;
+      size_t L = strlen(tok);
+      while (L > 0 && (tok[L - 1] == ' ' || tok[L - 1] == '\t'))
+        tok[--L] = '\0';
+      if (tok[0] == '\0')
+        continue;
+      if (nk >= MAX_KERNEL_CHAIN) {
+        fprintf(stderr, "too many kernels in %s (max %d)\n", ENV_KERNEL_CHAIN,
+                MAX_KERNEL_CHAIN);
+        free(buf);
+        return 1;
+      }
+      CUresult gr = cuModuleGetFunction(&kfns[nk], mod, tok);
+      if (gr != CUDA_SUCCESS) {
+        const char *em = NULL;
+        cuGetErrorString(gr, &em);
+        fprintf(stderr, "cuModuleGetFunction(%s): %d %s\n", tok, (int)gr,
+                em ? em : "?");
+        free(buf);
+        return 1;
+      }
+      nk++;
+    }
+    free(buf);
+  } else {
+    CUDA_CHECK(cuModuleGetFunction(&kfns[0], mod, "vl_eval_batch_gpu"));
+    nk = 1;
+  }
+  if (nk < 1) {
+    fprintf(stderr, "no kernels to launch\n");
+    return 1;
+  }
 
   CUdeviceptr d_storage = 0;
   CUDA_CHECK(cuMemAlloc(&d_storage, total));
   CUDA_CHECK(cuMemsetD8(d_storage, 0, total));
+
+  {
+    const char *init_state_path = getenv(ENV_INIT_STATE);
+    if (init_state_path && init_state_path[0] != '\0') {
+      FILE *fp = fopen(init_state_path, "rb");
+      if (!fp) {
+        fprintf(stderr, "failed to open %s=%s\n", ENV_INIT_STATE, init_state_path);
+        return 1;
+      }
+      if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        fprintf(stderr, "failed to seek %s\n", init_state_path);
+        return 1;
+      }
+      long file_size_long = ftell(fp);
+      if (file_size_long < 0) {
+        fclose(fp);
+        fprintf(stderr, "failed to stat %s\n", init_state_path);
+        return 1;
+      }
+      if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        fprintf(stderr, "failed to rewind %s\n", init_state_path);
+        return 1;
+      }
+      size_t file_size = (size_t)file_size_long;
+      if (!(file_size == storage || file_size == total)) {
+        fclose(fp);
+        fprintf(stderr,
+                "%s size %zu does not match storage_size %zu or total bytes %zu\n",
+                init_state_path, file_size, storage, total);
+        return 1;
+      }
+      unsigned char *buf = (unsigned char *)malloc(file_size ? file_size : 1);
+      if (!buf) {
+        fclose(fp);
+        fprintf(stderr, "malloc failed for init state\n");
+        return 1;
+      }
+      if (file_size && fread(buf, 1, file_size, fp) != file_size) {
+        free(buf);
+        fclose(fp);
+        fprintf(stderr, "failed to read %s\n", init_state_path);
+        return 1;
+      }
+      fclose(fp);
+      if (file_size == total) {
+        CUDA_CHECK(cuMemcpyHtoD(d_storage, buf, total));
+      } else {
+        for (unsigned state = 0; state < nstates; state++) {
+          CUDA_CHECK(cuMemcpyHtoD(d_storage + ((size_t)state * storage), buf, storage));
+        }
+      }
+      free(buf);
+    }
+  }
 
   int nstates_i = (int)nstates;
   void *params[] = {&d_storage, &nstates_i};
@@ -184,8 +293,10 @@ int main(int argc, char **argv) {
   const int sync_each_step = getenv(ENV_SYNC_EACH_STEP) != NULL;
 
   if (getenv(ENV_WARMUP) != NULL) {
-    CUDA_CHECK(cuLaunchKernel(kfn, grid, 1, 1, block, 1, 1, 0, 0, params,
-                              NULL));
+    for (int k = 0; k < nk; k++) {
+      CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0, params,
+                                NULL));
+    }
     CUDA_CHECK(cuCtxSynchronize());
   }
 
@@ -201,8 +312,10 @@ int main(int argc, char **argv) {
                                 &patches[i].val, 1));
       }
       CUDA_CHECK(cuEventRecord(ev_start, 0));
-      CUDA_CHECK(cuLaunchKernel(kfn, grid, 1, 1, block, 1, 1, 0, 0, params,
-                                NULL));
+      for (int k = 0; k < nk; k++) {
+        CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0,
+                                  params, NULL));
+      }
       CUDA_CHECK(cuEventRecord(ev_stop, 0));
       CUDA_CHECK(cuCtxSynchronize());
       float step_ms = 0.f;
@@ -226,8 +339,10 @@ int main(int argc, char **argv) {
         CUDA_CHECK(cuEventRecord(ev_start, 0));
         recorded_start = 1;
       }
-      CUDA_CHECK(cuLaunchKernel(kfn, grid, 1, 1, block, 1, 1, 0, 0, params,
-                                NULL));
+      for (int k = 0; k < nk; k++) {
+        CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0,
+                                  params, NULL));
+      }
     }
     CUDA_CHECK(cuEventRecord(ev_stop, 0));
     CUDA_CHECK(cuCtxSynchronize());
@@ -247,9 +362,9 @@ int main(int argc, char **argv) {
   double us_per_state =
       (nstates > 0) ? (ms_per_launch / (double)nstates) * 1000.0 : 0.0;
 
-  printf("ok: steps=%u patches_per_step=%d grid=%u block=%u nstates=%u "
-         "storage=%zu B\n",
-         steps, npatch, grid, block, nstates, storage);
+  printf("ok: steps=%u kernels_per_step=%d patches_per_step=%d grid=%u block=%u "
+         "nstates=%u storage=%zu B\n",
+         steps, nk, npatch, grid, block, nstates, storage);
   if (sync_each_step) {
     printf("gpu_kernel_time_ms: total=%.6f  per_launch=%.6f  (per-step CUDA "
            "events; kernels only)\n",
@@ -268,6 +383,31 @@ int main(int argc, char **argv) {
          us_per_state);
   printf("wall_time_ms: %.3f  (host; one GPU sync unless %s=1)\n", wall_ms,
          ENV_SYNC_EACH_STEP);
+
+  const char *dump_path = getenv(ENV_DUMP_STATE);
+  if (dump_path && dump_path[0] != '\0') {
+    unsigned char *host = (unsigned char *)malloc(total);
+    if (!host) {
+      fprintf(stderr, "malloc failed for %zu-byte state dump\n", total);
+      return 1;
+    }
+    CUDA_CHECK(cuMemcpyDtoH(host, d_storage, total));
+    FILE *fp = fopen(dump_path, "wb");
+    if (!fp) {
+      fprintf(stderr, "fopen(%s) failed\n", dump_path);
+      free(host);
+      return 1;
+    }
+    size_t nw = fwrite(host, 1, total, fp);
+    fclose(fp);
+    free(host);
+    if (nw != total) {
+      fprintf(stderr, "short write to %s: wrote %zu / %zu bytes\n", dump_path,
+              nw, total);
+      return 1;
+    }
+    printf("state_dump: %s (%zu bytes)\n", dump_path, total);
+  }
 
   CUDA_CHECK(cuMemFree(d_storage));
   CUDA_CHECK(cuCtxDestroy(ctx));

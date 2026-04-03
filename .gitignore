@@ -2,6 +2,7 @@ output/
 rtlmeter/venv/
 __pycache__/
 *.pyc
+.codex
 verilator/
 third_party/verilator/bin/verilator_bin
 third_party/verilator/bin/verilator_bin_dbg

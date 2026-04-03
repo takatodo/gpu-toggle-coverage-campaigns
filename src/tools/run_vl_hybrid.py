@@ -7,6 +7,9 @@ Requires: build_vl_gpu.py output (cubin + vl_batch_gpu.meta.json) and `make -C s
 Usage:
   python3 run_vl_hybrid.py --mdir <verilator-cc-dir> [--nstates N] [--steps S] [--patch O:V ...]
   python3 run_vl_hybrid.py --cubin path.cubin --storage-size BYTES --nstates N [--steps S] ...
+  python3 run_vl_hybrid.py --mdir <verilator-cc-dir> --dump-state out.bin
+  python3 run_vl_hybrid.py --mdir <verilator-cc-dir> --init-state init.bin
+  python3 run_vl_hybrid.py --cubin path.cubin --storage-size BYTES --kernels k0,k1,k2
 """
 
 from __future__ import annotations
@@ -33,6 +36,13 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 HYBRID_BIN = REPO_ROOT / "src" / "hybrid" / "run_vl_hybrid"
 
 
+def _parse_kernel_list(raw: str | None) -> list[str] | None:
+    if raw is None:
+        return None
+    items = [part.strip() for part in raw.split(",")]
+    return [item for item in items if item]
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Run hybrid GPU launch (vl_eval_batch_gpu)")
     p.add_argument(
@@ -57,7 +67,22 @@ def main() -> None:
         metavar="GLOBAL_OFF:BYTE",
         help="Per-step HtoD patch (repeatable); byte decimal or 0xNN",
     )
+    p.add_argument(
+        "--dump-state",
+        type=Path,
+        help="Optional raw binary dump of final device storage after all launches",
+    )
+    p.add_argument(
+        "--init-state",
+        type=Path,
+        help="Optional raw binary state image uploaded before any patches/launches",
+    )
+    p.add_argument(
+        "--kernels",
+        help="Optional comma-separated kernel override; bypasses meta launch_sequence when set",
+    )
     args = p.parse_args()
+    launch_sequence = None
 
     if args.mdir:
         mdir = args.mdir.resolve()
@@ -70,6 +95,7 @@ def main() -> None:
             print("warning: meta.json missing schema_version (older build)", file=sys.stderr)
         cubin = (mdir / meta["cubin"]).resolve()
         storage = int(meta["storage_size"])
+        launch_sequence = meta.get("launch_sequence")
     else:
         if not args.cubin or args.storage_size is None:
             p.error("either --mdir or both --cubin and --storage-size are required")
@@ -98,7 +124,26 @@ def main() -> None:
     for pat in args.patch:
         cmd.append(pat)
     print(" ".join(cmd))
-    subprocess.run(cmd, check=True)
+    env = os.environ.copy()
+    kernel_override = _parse_kernel_list(args.kernels)
+    if kernel_override is not None:
+        env["RUN_VL_HYBRID_KERNELS"] = ",".join(kernel_override)
+    elif launch_sequence:
+        env["RUN_VL_HYBRID_KERNELS"] = ",".join(str(x) for x in launch_sequence)
+    else:
+        env.pop("RUN_VL_HYBRID_KERNELS", None)
+    if args.dump_state:
+        dump_state = args.dump_state.resolve()
+        dump_state.parent.mkdir(parents=True, exist_ok=True)
+        env["RUN_VL_HYBRID_DUMP_STATE"] = str(dump_state)
+    else:
+        env.pop("RUN_VL_HYBRID_DUMP_STATE", None)
+    if args.init_state:
+        init_state = args.init_state.resolve()
+        env["RUN_VL_HYBRID_INIT_STATE"] = str(init_state)
+    else:
+        env.pop("RUN_VL_HYBRID_INIT_STATE", None)
+    subprocess.run(cmd, check=True, env=env)
 
 
 if __name__ == "__main__":

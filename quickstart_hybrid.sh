@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# quickstart_hybrid.sh — quickstart-style driver for stock Verilator → cubin → run_vl_hybrid (Phase D)
+# quickstart_hybrid.sh — quickstart-style driver for stock Verilator → cubin → hybrid runner
 # Runs under zsh by default; `bash quickstart_hybrid.sh` also works if you prefer bash.
 set -euo pipefail
 
@@ -26,6 +26,11 @@ _sock_m1_same() {
   else
     return 1
   fi
+}
+_sock_m1_model_present() {
+  local d
+  d="${1%/}"
+  [ -f "$d/Vtlul_socket_m1_gpu_cov_tb_classes.mk" ] || [ -f "$d/Vtlul_socket_m1_gpu_cov_tb.mk" ]
 }
 # WSL2: nvidia-smi can work while cuInit/cuDeviceGet fail (error 100) until the host
 # libcuda is preferred. Prepend when present (no-op on native Linux without this path).
@@ -57,11 +62,13 @@ LITE=0
 CLANG_OPT=O1
 NO_BOOTSTRAP=0
 ANALYZE_PHASES=0
+KERNEL_SPLIT_PHASES=0
+SOCKET_M1_HOST_GPU_FLOW=0
 PATCHES=()
 
 usage() {
   cat <<EOF
-quickstart_hybrid.sh — stock Verilator --cc → cubin → run_vl_hybrid (Phase D).
+quickstart_hybrid.sh — stock Verilator --cc → cubin → hybrid runner.
 
 Usage:
   $SELF [--mdir <verilator-cc-dir> | <verilator-cc-dir>] [options]
@@ -85,6 +92,12 @@ Options:
   --clang-O LEVEL      clang -O when emitting .ll: O0 O1 O2 O3 Os Oz (default: O1)
   --no-bootstrap       Do not auto-run Verilator for work/vl_ir_exp/socket_m1_vl
   --analyze-phases     Pass --analyze-phases to build_vl_gpu.py (Phase B ico/nba report)
+  --kernel-split-phases  Pass --kernel-split-phases to build_vl_gpu.py (Phase B multi-kernel)
+  --socket-m1-host-gpu-flow
+                       Run the first supported tlul_socket_m1 host->GPU handoff:
+                       host probe dumps one raw root image, then run_vl_hybrid consumes it
+                       via --init-state. Implies --kernel-split-phases and requires the
+                       tlul_socket_m1 Verilator --cc directory.
   -h, --help           This help
 
 Example:
@@ -160,6 +173,15 @@ while [ $# -gt 0 ]; do
       ANALYZE_PHASES=1
       shift
       ;;
+    --kernel-split-phases)
+      KERNEL_SPLIT_PHASES=1
+      shift
+      ;;
+    --socket-m1-host-gpu-flow)
+      SOCKET_M1_HOST_GPU_FLOW=1
+      KERNEL_SPLIT_PHASES=1
+      shift
+      ;;
     --lite)
       LITE=1
       NSTATES=64
@@ -191,12 +213,16 @@ done
 print_next_steps() {
   echo
   echo -e "${GREEN}Hybrid quickstart done.${RESET} Next steps:"
-  echo "  python3 src/tools/run_vl_hybrid.py --mdir <cc-dir> [--nstates N] [--steps S] [--patch off:byte ...]"
+  if [ "$SOCKET_M1_HOST_GPU_FLOW" -eq 1 ]; then
+    echo "  python3 src/tools/run_socket_m1_host_gpu_flow.py --mdir <socket_m1-cc-dir> [--nstates N] [--steps S] [--patch off:byte ...]"
+  else
+    echo "  python3 src/tools/run_vl_hybrid.py --mdir <cc-dir> [--nstates N] [--steps S] [--patch off:byte ...]"
+  fi
   echo "  python3 src/tools/build_vl_gpu.py <cc-dir> [--sm $SM]   # rebuild cubin"
-  echo "  See README.md (Running, Phase D) and docs/phase_b_ico_nba_spike.md"
+  echo "  See README.md, docs/roadmap_tasks.md, and docs/phase_c_socket_m1_host_abi.md"
 }
 
-echo -e "${BOLD}=== Hybrid GPU path — quickstart (stock Verilator → cubin → run_vl_hybrid) ===${RESET}"
+echo -e "${BOLD}=== Hybrid GPU path — quickstart (stock Verilator → cubin → hybrid runner) ===${RESET}"
 echo
 
 # If no --mdir, use bundled OpenTitan TLUL example when present (under work/ on many clones).
@@ -368,6 +394,7 @@ else
   )
   [ "$FORCE_BUILD" -eq 1 ] && BUILD_CMD+=(--force)
   [ "$ANALYZE_PHASES" -eq 1 ] && BUILD_CMD+=(--analyze-phases)
+  [ "$KERNEL_SPLIT_PHASES" -eq 1 ] && BUILD_CMD+=(--kernel-split-phases)
   "${BUILD_CMD[@]}"
   ok "cubin + vl_batch_gpu.meta.json"
 fi
@@ -375,10 +402,15 @@ fi
 # ── 6. Hybrid binary ─────────────────────────────────────────────────────────
 echo
 echo "[6/7] make -C src/hybrid (run_vl_hybrid)"
-if make -q -C "$REPO_ROOT/src/hybrid" --no-print-directory 2>/dev/null; then
+HYBRID_MAKE=(make)
+if [ -z "${CUDA_HOME:-}" ] && [ -f /usr/include/cuda.h ] && [ ! -f /usr/local/cuda/include/cuda.h ]; then
+  HYBRID_MAKE+=(CUDA_HOME=/usr)
+  warn "CUDA_HOME not set; using CUDA_HOME=/usr for src/hybrid"
+fi
+if "${HYBRID_MAKE[@]}" -q -C "$REPO_ROOT/src/hybrid" --no-print-directory 2>/dev/null; then
   ok "src/hybrid up to date (make skipped)"
 else
-  if ! make -C "$REPO_ROOT/src/hybrid" -s --no-print-directory; then
+  if ! "${HYBRID_MAKE[@]}" -C "$REPO_ROOT/src/hybrid" -s --no-print-directory; then
     echo "error: make -C src/hybrid failed (need CUDA driver dev headers + libcuda)" >&2
     exit 1
   fi
@@ -387,7 +419,11 @@ fi
 
 # ── 7. Run + GPU timing (CUDA events in run_vl_hybrid.c) ────────────────────
 echo
-if [ "$LITE" -eq 1 ]; then
+if [ "$SOCKET_M1_HOST_GPU_FLOW" -eq 1 ] && [ "$LITE" -eq 1 ]; then
+  echo "[7/7] run_socket_m1_host_gpu_flow.py (--lite: nstates=$NSTATES steps=$STEPS)"
+elif [ "$SOCKET_M1_HOST_GPU_FLOW" -eq 1 ]; then
+  echo "[7/7] run_socket_m1_host_gpu_flow.py (nstates=$NSTATES steps=$STEPS; supported socket_m1 handoff)"
+elif [ "$LITE" -eq 1 ]; then
   echo "[7/7] run_vl_hybrid.py (--lite: nstates=$NSTATES steps=$STEPS)"
 else
   echo "[7/7] run_vl_hybrid.py (nstates=$NSTATES steps=$STEPS; use --lite or lower --nstates if slow)"
@@ -398,13 +434,44 @@ if [ "$SKIP_RUN" -eq 1 ]; then
   exit 0
 fi
 
-HYBRID_ARGS=(
-  python3 "$REPO_ROOT/src/tools/run_vl_hybrid.py"
-  --mdir "$MDIR_ABS"
-  --nstates "$NSTATES"
-  --steps "$STEPS"
-  --block-size "$BLOCK"
-)
+if [ "$SOCKET_M1_HOST_GPU_FLOW" -eq 1 ]; then
+  if ! _sock_m1_same "$MDIR_ABS" "$_SOCKET_M1_CC" && ! _sock_m1_model_present "$MDIR_ABS"; then
+    echo "error: --socket-m1-host-gpu-flow requires the tlul_socket_m1 Verilator --cc directory" >&2
+    exit 1
+  fi
+  META="$MDIR_ABS/vl_batch_gpu.meta.json"
+  if ! python3 - "$META" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+meta_path = Path(sys.argv[1])
+meta = json.loads(meta_path.read_text(encoding="utf-8"))
+seq = meta.get("launch_sequence") or []
+ok = bool(seq) and seq[0] == "vl_ico_batch_gpu" and any(name.startswith("vl_nba_seg") for name in seq)
+raise SystemExit(0 if ok else 1)
+PY
+  then
+    echo "error: --socket-m1-host-gpu-flow requires a guarded-segment build (run without --skip-build or pass --kernel-split-phases)" >&2
+    exit 1
+  fi
+  HYBRID_ARGS=(
+    python3 "$REPO_ROOT/src/tools/run_socket_m1_host_gpu_flow.py"
+    --mdir "$MDIR_ABS"
+    --nstates "$NSTATES"
+    --steps "$STEPS"
+    --block-size "$BLOCK"
+    --json-out "$MDIR_ABS/socket_m1_host_gpu_flow_summary.json"
+  )
+else
+  HYBRID_ARGS=(
+    python3 "$REPO_ROOT/src/tools/run_vl_hybrid.py"
+    --mdir "$MDIR_ABS"
+    --nstates "$NSTATES"
+    --steps "$STEPS"
+    --block-size "$BLOCK"
+  )
+fi
 for pat in "${PATCHES[@]}"; do
   HYBRID_ARGS+=(--patch "$pat")
 done

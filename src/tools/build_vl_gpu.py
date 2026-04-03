@@ -68,6 +68,18 @@ def run(cmd: list, **kwargs):
     subprocess.run(cmd, check=True, **kwargs)
 
 
+def load_launch_sequence_from_manifest(manifest_path: Path) -> list[str]:
+    if not manifest_path.is_file():
+        raise RuntimeError(f'kernel manifest not found: {manifest_path}')
+    payload = json.loads(manifest_path.read_text(encoding='utf-8'))
+    launch_sequence = payload.get('launch_sequence')
+    if not isinstance(launch_sequence, list) or not launch_sequence:
+        raise RuntimeError(f'invalid kernel manifest launch_sequence: {manifest_path}')
+    if any(not isinstance(item, str) or not item for item in launch_sequence):
+        raise RuntimeError(f'invalid kernel manifest kernel name: {manifest_path}')
+    return [str(item) for item in launch_sequence]
+
+
 def read_mk_list(mk_text: str, var: str) -> list[str]:
     """Makefile の var += ... (複数行) を収集して値リストを返す"""
     values = []
@@ -166,6 +178,7 @@ def build_vl_gpu(
     force: bool = False,
     clang_opt: str = 'O1',
     analyze_phases: bool = False,
+    kernel_split_phases: bool = False,
 ) -> tuple[Path, int]:
 
     mdir = mdir.resolve()
@@ -214,8 +227,12 @@ def build_vl_gpu(
         print(f'  [cached] merged.ll')
 
     if analyze_phases:
+        phase_json = (mdir / 'vl_phase_analysis.json').resolve()
         print('  [analyze-phases] vlgpugen --analyze-phases merged.ll', flush=True)
-        run([str(VLGPUGEN), str(merged_ll), '--analyze-phases'])
+        run([
+            str(VLGPUGEN), str(merged_ll), '--analyze-phases',
+            f'--analyze-phases-json={phase_json}',
+        ])
 
     # Step 3: detect storage_size
     print('  [probe] detecting storage_size...')
@@ -224,9 +241,19 @@ def build_vl_gpu(
 
     # Step 4: vlgpugen merged.ll → vl_batch_gpu.ll
     gpu_ll = mdir / 'vl_batch_gpu.ll'
+    kernel_manifest = mdir / 'vl_kernel_manifest.json'
+    launch_sequence = None
     print('  [vlgpugen] → vl_batch_gpu.ll')
-    run([str(VLGPUGEN), str(merged_ll),
-         f'--storage-size={storage_size}', f'--out={gpu_ll}'])
+    vg_cmd = [
+        str(VLGPUGEN), str(merged_ll),
+        f'--storage-size={storage_size}', f'--out={gpu_ll}',
+    ]
+    if kernel_split_phases:
+        vg_cmd.append('--kernel-split=phases')
+        vg_cmd.append(f'--kernel-manifest-out={kernel_manifest}')
+    run(vg_cmd)
+    if kernel_split_phases:
+        launch_sequence = load_launch_sequence_from_manifest(kernel_manifest)
 
     # Step 5a: VlGpuPasses.so のビルド (変更がなければ no-op)
     run(['make', '-C', str(PASSES_DIR), '--no-print-directory'])
@@ -262,8 +289,13 @@ def build_vl_gpu(
         "kernel": "vl_eval_batch_gpu",
         "clang_opt": clang_opt,
     }
+    if kernel_split_phases:
+        meta["launch_sequence"] = launch_sequence
     meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
     opt_marker.write_text(clang_opt + "\n", encoding="utf-8")
+    (mdir / '.vl_gpu_kernel_split').write_text(
+        'phases' if kernel_split_phases else '', encoding='utf-8'
+    )
     print(f"  [meta] → {meta_path.name}")
     print(f'\nDone: {out_cubin}  ({sz} bytes)  storage_size={storage_size}')
     return out_cubin, storage_size
@@ -291,7 +323,12 @@ def main():
     p.add_argument(
         '--analyze-phases',
         action='store_true',
-        help='After merged.ll, run vlgpugen --analyze-phases (Phase B ico/nba reachability); then continue cubin build.',
+        help='After merged.ll, run vlgpugen --analyze-phases and write mdir/vl_phase_analysis.json; then continue cubin build.',
+    )
+    p.add_argument(
+        '--kernel-split-phases',
+        action='store_true',
+        help='Pass --kernel-split=phases to vlgpugen (ico/nba batch kernels + vl_eval_batch_gpu); meta gets launch_sequence.',
     )
     args = p.parse_args()
 
@@ -302,6 +339,7 @@ def main():
         force=args.force,
         clang_opt=args.clang_opt,
         analyze_phases=args.analyze_phases,
+        kernel_split_phases=args.kernel_split_phases,
     )
     print(f'\nstorage_size={sz}')
     print(f'cubin={cubin}')
