@@ -6,27 +6,7 @@ GPU-accelerated RTL toggle coverage collection across multiple open-source RISC-
 
 **Recommended path — stock Verilator → LLVM IR → cubin** (no sim-accel fork):
 
-The **Verilator sim-accel fork** was abandoned here: its lowered CUDA / IR pipeline **does not preserve full RTL semantics** (e.g. `always_ff` reset behavior, preload stubs), so GPU toggle numbers can diverge from RTL simulation. New work uses **normal `verilator --cc`** output, `clang++ -emit-llvm`, **`vlgpugen`**, and `opt`/`llc`/`ptxas` — see README section *Experimental: Standard Verilator → LLVM IR → GPU* and `src/tools/build_vl_gpu.py`.
-
-```
-RTL (SystemVerilog)
-    │
-    └─[stock Verilator --cc --flatten]─→ V*.cpp
-                                          │
-                                  clang++-18 -emit-llvm -O1
-                                          │
-                                    llvm-link-18 → merged.ll
-                                          │
-                                  vlgpugen --storage-size=N --out=vl_batch_gpu.ll
-                                          │
-                                  opt-18 (+ VlGpuPasses.so) → opt -O3
-                                          │
-                                  llc-18 (nvptx64) → ptxas → cubin
-                                          │
-                                   GPU parallel simulation (AoS batched _eval)
-                                          │
-                                 toggle coverage bits
-```
+New work uses **normal `verilator --cc`** output, `clang++ -emit-llvm`, **`vlgpugen`**, and `opt`/`llc`/`ptxas` — see *Experimental: Standard Verilator → LLVM IR → GPU* below and `src/tools/build_vl_gpu.py`.
 
 ### Backend selection (RTLMeter / legacy runners)
 
@@ -36,16 +16,6 @@ RTL (SystemVerilog)
 | `cuda_vl_ir` | sim-accel `full_comb`/`full_seq` → LLVM → cubin (inside `verilator_sim_accel_bench`) | **legacy** — semantic mismatches vs RTL |
 | `rocm_llvm` | Same class of flow as `cuda_vl_ir`, AMD GPU | legacy / environment-specific |
 | `cuda_circt_cubin` | CIRCT flow (`program.json` → chunked cubin) | legacy compat |
-
-Known issues on the **legacy `cuda_vl_ir` / sim-accel** path (not claimed for stock + `vlgpugen`):
-
-- `preload_word` stub gaps, `always_ff` conditional reset handling, and related **GPU vs RTL toggle mismatches**.
-
-### Why stock Verilator C++ → LLVM IR
-
-The CIRCT / `program.json` path splits assigns into comb/seq domains before IR; `program.json` assigns are **interleaved in global dependency order**, so naive splitting **corrupts execution order**.
-
-**Stock Verilator** emits ordinary C++ (`--cc`) with consistent ordering. `clang++ -emit-llvm` lowers that to LLVM IR; **`vlgpugen`** extracts the GPU slice, stubs host/runtime calls, and emits the batch kernel. Downstream: `clang-18`, `llvm-link-18`, `llc-18`, `ptxas` (no `nvcc` for that compile chain).
 
 ## Repository Structure
 
@@ -325,17 +295,6 @@ host-global cleanup and kernel injection live here. Build: `make -C src/passes` 
 | 1 | **done** | `lowerinvoke` only via `opt` in `build_vl_gpu.py` (no Python `lower_invoke_to_call`) |
 | 2 | **done** | `VlStripX86Attrs` + `VlPatchConvergence` in `src/passes/VlGpuPasses.cpp` + `src/passes/Makefile` |
 | 3 | **done** | `vlgpugen`: full generation (stubs, host-global removal, kernel, NVPTX module). `build_vl_gpu.py` invokes `vlgpugen` instead of `gen_vl_gpu_kernel.py`. |
-
-**Production pipeline (current):**
-
-```
-merged.ll
-    ↓ vlgpugen --storage-size=N --out=vl_batch_gpu.ll
-    ↓ opt --load-pass-plugin=VlGpuPasses.so
-          -passes="lowerinvoke,simplifycfg,vl-strip-x86-attrs,vl-patch-convergence"
-    ↓ opt -O3 | llc -march=nvptx64 | ptxas
-    ↓ cubin
-```
 
 **Verified (representative tlul slice build):** `make -C src/passes` succeeds; analysis reports eval + reachable
 functions (e.g. **14** reachable, **11** GPU / **3** runtime), **vlSymsp** offset **2000** bytes; generation
