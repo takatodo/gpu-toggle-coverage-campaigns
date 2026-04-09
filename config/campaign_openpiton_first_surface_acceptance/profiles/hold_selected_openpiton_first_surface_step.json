@@ -1,0 +1,5 @@
+{
+  "accept_selected_openpiton_first_surface_step": false,
+  "name": "hold_selected_openpiton_first_surface_step",
+  "notes": "Keep the selected OpenPiton first surface in pre-acceptance state."
+}

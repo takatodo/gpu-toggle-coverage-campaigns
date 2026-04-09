@@ -402,6 +402,88 @@ class CompareVlHybridModesTest(unittest.TestCase):
 
             self.assertEqual(rc, 0)
 
+    def test_main_can_pass_with_phase_b_endpoint_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            mdir = root / "mdir"
+            mdir.mkdir()
+
+            def _fake_build_vl_gpu(
+                mdir_path: Path,
+                *,
+                sm: str,
+                out_cubin: Path,
+                force: bool,
+                clang_opt: str,
+                kernel_split_phases: bool,
+            ):
+                out_cubin.write_bytes(b"cubin")
+                if kernel_split_phases:
+                    (mdir_path / "vl_batch_gpu.meta.json").write_text(
+                        json.dumps({"launch_sequence": ["vl_ico_batch_gpu"]}) + "\n",
+                        encoding="utf-8",
+                    )
+                return out_cubin, 16
+
+            run_count = {"value": 0}
+
+            def _fake_run_hybrid(
+                *,
+                mdir: Path | None,
+                cubin: Path | None,
+                storage_size: int,
+                nstates: int,
+                steps: int,
+                block_size: int,
+                dump_state: Path,
+                patches: list[str],
+                kernels: list[str] | None = None,
+            ) -> None:
+                if run_count["value"] == 0:
+                    dump_state.write_bytes(bytes([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4]) + b"\x00" * 3)
+                else:
+                    dump_state.write_bytes(bytes(16))
+                run_count["value"] += 1
+
+            argv = [
+                "compare_vl_hybrid_modes.py",
+                str(mdir),
+                "--acceptance-policy",
+                "phase_b_endpoint",
+            ]
+            with mock.patch.object(self.module, "build_vl_gpu", side_effect=_fake_build_vl_gpu):
+                with mock.patch.object(self.module, "run_hybrid", side_effect=_fake_run_hybrid):
+                    with mock.patch.object(
+                        self.module,
+                        "probe_root_layout",
+                        return_value=[
+                            {"name": "__VicoPhaseResult", "offset": 0, "size": 1},
+                            {"name": "__VactIterCount", "offset": 4, "size": 4},
+                            {"name": "__VinactIterCount", "offset": 8, "size": 4},
+                            {"name": "__VicoTriggered", "offset": 12, "size": 1},
+                        ],
+                    ):
+                        with mock.patch.object(sys, "argv", argv):
+                            rc = self.module.main()
+
+            self.assertEqual(rc, 0)
+
+    def test_phase_b_endpoint_rejects_unexpected_internal_field(self) -> None:
+        summary = {
+            "match": False,
+            "mismatch_fields": [
+                {"field_name": "__VicoPhaseResult", "field_role": "verilator_internal"},
+                {"field_name": "__VnbaTriggered", "field_role": "verilator_internal"},
+            ],
+            "acceptance_candidates": {
+                "strict_match": False,
+                "match_excluding_verilator_internal": True,
+            },
+        }
+        policies = self.module.build_acceptance_policies(summary)
+        self.assertTrue(policies["ignore_verilator_internal_final_state"]["passed"])
+        self.assertFalse(policies["phase_b_endpoint"]["passed"])
+
     def test_main_records_first_non_internal_delta_prefix(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

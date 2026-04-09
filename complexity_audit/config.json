@@ -1,0 +1,58 @@
+{
+  "_comment": "Project-specific config for gpu-toggle-coverage-campaigns. Copy and edit for other repos.",
+
+  "ignored_parts": [
+    ".git", "__pycache__", ".pytest_cache",
+    "rtlmeter", "third_party", "venv", ".grimp_cache", "vl_ir_exp"
+  ],
+
+  "variant_patterns": ["*threshold5*"],
+  "variant_search_dirs": ["output", "work"],
+
+  "runner_dirs": ["src/runners"],
+  "runner_outlier_loc": 500,
+
+  "docs_dir": "docs",
+  "docs_index_stems": ["README"],
+  "docs_suffix_categories": {
+    "execution_packet": "_execution_packet",
+    "packet":           "_packet",
+    "design":           "_design",
+    "plan":             "_plan"
+  },
+
+  "test_dir": "src/scripts/tests",
+  "test_suffix_patterns": {
+    "contract":   "_contract",
+    "artifacts":  "_artifacts",
+    "validation": "_validation"
+  },
+
+  "file_count_dirs": [
+    "src/tools",
+    "src/runners",
+    "src/scripts/tests",
+    "docs",
+    "output/validation",
+    "work"
+  ],
+
+  "source_loc_dirs": [
+    "src/tools",
+    "src/runners",
+    "src/scripts/tests",
+    "src/scripts",
+    "src/grpo",
+    "src/rocm",
+    "src/sim_accel",
+    "src/generators"
+  ],
+  "source_loc_suffix": ".py",
+
+  "not_regression_metrics": [
+    "file_counts.output/validation",
+    "file_counts.src/scripts/tests",
+    "file_counts.work",
+    "source_loc.src/scripts/tests"
+  ]
+}

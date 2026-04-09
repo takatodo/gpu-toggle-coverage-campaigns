@@ -1,0 +1,7 @@
+{
+  "candidate_threshold_value": 4,
+  "design": "VeeR-EH2",
+  "name": "veer_eh2_candidate_only_threshold4",
+  "notes": "Accept the checked-in threshold=4 candidate-only hybrid win as the next selected VeeR same-family step.",
+  "step_mode": "candidate_only_threshold"
+}

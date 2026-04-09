@@ -1,0 +1,5 @@
+{
+  "accept_selected_vortex_first_surface_step": true,
+  "name": "accept_selected_vortex_first_surface_step",
+  "notes": "Accept the selected Vortex first surface as checked-in non-OpenTitan breadth evidence."
+}

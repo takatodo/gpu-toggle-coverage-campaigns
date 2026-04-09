@@ -1,0 +1,7 @@
+{
+  "family": "OpenPiton",
+  "name": "openpiton_default_gate_hold",
+  "notes": "Keep the ready OpenPiton default-gate line in pre-acceptance state.",
+  "step_mode": "default_gate_hold",
+  "threshold_value": 8
+}

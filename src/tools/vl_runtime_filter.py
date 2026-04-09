@@ -45,6 +45,8 @@ def is_runtime(name: str, func_body: str) -> bool:
     """
     if any(pat in name for pat in _FORCE_INCLUDE_PATTERNS):
         return False
+    if "___024root___" in name:
+        return False
     if any(name.startswith(p) for p in _RUNTIME_PREFIXES):
         return True
     if re.search(r'@_ZGVZ', func_body):

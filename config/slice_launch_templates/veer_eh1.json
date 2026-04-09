@@ -1,0 +1,24 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "VeeR.veer_eh1",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the VeeR-EH1 gpu_cov single-surface fallback line.",
+    "The checked-in candidate relies on hidden gpu_cov program-entry preload via program_entries.bin."
+  ],
+  "enrollment": {
+    "slug": "veer_eh1",
+    "mdir_name": "veer_eh1_gpu_cov_vl",
+    "runtime_input_type": "program_hex",
+    "runtime_input_path": "third_party/rtlmeter/designs/VeeR-EH1/tests/hello/program.hex"
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/VeeR-EH1/src/veer_eh1_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "VeeR.veer_eh1",
+    "top_module": "veer_eh1_gpu_cov_tb"
+  }
+}

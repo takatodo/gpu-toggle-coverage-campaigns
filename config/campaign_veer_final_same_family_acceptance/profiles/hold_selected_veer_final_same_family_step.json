@@ -1,0 +1,5 @@
+{
+  "accept_selected_veer_final_same_family_step": false,
+  "name": "hold_selected_veer_final_same_family_step",
+  "notes": "Keep the selected VeeR-EL2 same-family step in pre-acceptance state."
+}

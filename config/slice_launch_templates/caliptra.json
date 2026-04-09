@@ -1,0 +1,30 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "Caliptra.caliptra",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the first Caliptra single-surface stock-hybrid trio.",
+    "The checked-in candidate stages program.hex plus companion mailbox/dccm/iccm hex files into mdir so caliptra_top_tb_services can load them via basename-based $readmemh lookups."
+  ],
+  "enrollment": {
+    "slug": "caliptra",
+    "mdir_name": "caliptra_gpu_cov_vl",
+    "runtime_input_type": "runtime_file",
+    "runtime_input_path": "third_party/rtlmeter/designs/Caliptra/tests/hello/program.hex",
+    "runtime_input_name": "program.hex",
+    "runtime_input_companion_paths": [
+      "third_party/rtlmeter/designs/Caliptra/tests/hello/dccm.hex",
+      "third_party/rtlmeter/designs/Caliptra/tests/hello/iccm.hex",
+      "third_party/rtlmeter/designs/Caliptra/tests/hello/mailbox.hex"
+    ]
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/Caliptra/src/caliptra-rtl/caliptra_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "Caliptra.caliptra",
+    "top_module": "caliptra_gpu_cov_tb"
+  }
+}

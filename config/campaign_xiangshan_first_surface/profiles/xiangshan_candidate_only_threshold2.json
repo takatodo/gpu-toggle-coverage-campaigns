@@ -1,0 +1,7 @@
+{
+  "candidate_threshold_value": 2,
+  "design": "XiangShan",
+  "name": "xiangshan_candidate_only_threshold2",
+  "notes": "Accept the checked-in threshold=2 candidate-only hybrid win as the selected XiangShan first-surface step.",
+  "step_mode": "candidate_only_threshold"
+}

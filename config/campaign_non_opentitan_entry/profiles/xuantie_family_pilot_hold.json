@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "xuantie_family_pilot_hold",
+  "family": "XuanTie",
+  "entry_mode": "family_pilot",
+  "notes": "Keep the legacy family_pilot as the preferred entry shape and restore the missing legacy bench before execution."
+}

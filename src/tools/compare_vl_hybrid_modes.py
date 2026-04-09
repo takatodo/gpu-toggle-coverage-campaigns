@@ -31,6 +31,13 @@ FIELD_DECL_RE = re.compile(r"([A-Za-z_]\w*)\s*;\s*$")
 VERILATOR_INTERNAL_FIELDS = {"vlSymsp", "vlNamep", "__VdlySched"}
 ACCEPTANCE_POLICY_STRICT = "strict_final_state"
 ACCEPTANCE_POLICY_IGNORE_INTERNAL = "ignore_verilator_internal_final_state"
+ACCEPTANCE_POLICY_PHASE_B_ENDPOINT = "phase_b_endpoint"
+PHASE_B_ALLOWED_INTERNAL_FIELDS = {
+    "__VicoPhaseResult",
+    "__VactIterCount",
+    "__VinactIterCount",
+    "__VicoTriggered",
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -226,10 +233,24 @@ def build_acceptance_candidates(
     }
 
 
+def has_only_phase_b_residual_fields(summary: dict[str, object]) -> bool:
+    mismatch_fields = list(summary.get("mismatch_fields") or [])
+    if not mismatch_fields:
+        return True
+    allowed = PHASE_B_ALLOWED_INTERNAL_FIELDS
+    for entry in mismatch_fields:
+        if str(entry.get("field_role")) != "verilator_internal":
+            return False
+        if str(entry.get("field_name")) not in allowed:
+            return False
+    return True
+
+
 def build_acceptance_policies(summary: dict[str, object]) -> dict[str, dict[str, object]]:
     candidates = dict(summary.get("acceptance_candidates") or {})
     strict_passed = bool(candidates.get("strict_match", summary.get("match", False)))
     ignore_internal_passed = bool(candidates.get("match_excluding_verilator_internal", False))
+    phase_b_endpoint_passed = ignore_internal_passed and has_only_phase_b_residual_fields(summary)
     return {
         ACCEPTANCE_POLICY_STRICT: {
             "passed": strict_passed,
@@ -241,6 +262,16 @@ def build_acceptance_policies(summary: dict[str, object]) -> dict[str, dict[str,
             "description": (
                 "Final design_state/top_level_io/other bytes must match; "
                 "verilator_internal bytes may differ."
+            ),
+            "diagnostic_only_prefixes": True,
+        },
+        ACCEPTANCE_POLICY_PHASE_B_ENDPOINT: {
+            "passed": phase_b_endpoint_passed,
+            "description": (
+                "Final design_state/top_level_io/other bytes must match, and any residual "
+                "verilator_internal mismatch must be limited to the known convergence "
+                "bookkeeping fields (__VicoPhaseResult, __VactIterCount, "
+                "__VinactIterCount, __VicoTriggered)."
             ),
             "diagnostic_only_prefixes": True,
         },
@@ -402,7 +433,11 @@ def main() -> int:
     p.add_argument(
         "--acceptance-policy",
         default=ACCEPTANCE_POLICY_STRICT,
-        choices=[ACCEPTANCE_POLICY_STRICT, ACCEPTANCE_POLICY_IGNORE_INTERNAL],
+        choices=[
+            ACCEPTANCE_POLICY_STRICT,
+            ACCEPTANCE_POLICY_IGNORE_INTERNAL,
+            ACCEPTANCE_POLICY_PHASE_B_ENDPOINT,
+        ],
         help="Pass/fail policy for the tool exit code (default: strict_final_state)",
     )
     args = p.parse_args()

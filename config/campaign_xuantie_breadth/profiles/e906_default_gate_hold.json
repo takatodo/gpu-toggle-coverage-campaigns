@@ -1,0 +1,6 @@
+{
+  "breadth_mode": "default_gate_hold",
+  "design": "XuanTie-E906",
+  "name": "e906_default_gate_hold",
+  "notes": "Keep E906 on the blocked default gate until the project either defines a new default gate or explicitly accepts candidate-only evidence."
+}

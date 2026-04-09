@@ -98,7 +98,20 @@
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_socket_1n_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
-    "debug_internal_output_names": [],
+    "debug_internal_output_names": [
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__fifo_h__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__fifo_h__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__0__KET____DOT__fifo_d__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__0__KET____DOT__fifo_d__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__1__KET____DOT__fifo_d__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__1__KET____DOT__fifo_d__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__2__KET____DOT__fifo_d__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__2__KET____DOT__fifo_d__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__3__KET____DOT__fifo_d__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__dut__DOT__gen_dfifo__BRA__3__KET____DOT__fifo_d__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__tl_h_o",
+      "tlul_socket_1n_gpu_cov_tb__DOT__tl_d_o"
+    ],
     "driver_defaults": {
       "access_ack_data_pct": 96,
       "address_mask": 4092,

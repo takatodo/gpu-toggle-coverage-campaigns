@@ -1,0 +1,35 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "BlackParrot.blackparrot",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the first BlackParrot single-surface stock-hybrid trio.",
+    "The checked-in candidate lowers BlackParrot's readmemh byte image into packed gpu_cov_program_words preload entries before the host probe or GPU runner starts."
+  ],
+  "enrollment": {
+    "slug": "blackparrot",
+    "mdir_name": "blackparrot_gpu_cov_vl",
+    "runtime_input_type": "blackparrot_prog_mem",
+    "runtime_input_path": "third_party/rtlmeter/designs/BlackParrot/tests/hello/prog.mem",
+    "runtime_input_target": {
+      "kind": "memory-array-preload-v1",
+      "name": "blackparrot_gpu_cov_tb_program_entries",
+      "description": "BlackParrot gpu_cov packed program-word preload entries",
+      "target_path": "blackparrot_gpu_cov_tb.gpu_cov_program_words",
+      "word_bits": 64,
+      "depth": 32768,
+      "base_addr": 0,
+      "address_unit_bytes": 8,
+      "endianness": "little"
+    }
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/BlackParrot/src/bp/blackparrot_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "BlackParrot.blackparrot",
+    "top_module": "blackparrot_gpu_cov_tb"
+  }
+}

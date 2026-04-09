@@ -1,0 +1,6 @@
+{
+  "branch_mode": "open_fallback_family",
+  "family": "VeeR",
+  "name": "open_veer_fallback_family",
+  "notes": "Move to the fallback non-OpenTitan family after the accepted XuanTie E902+E906 baseline."
+}

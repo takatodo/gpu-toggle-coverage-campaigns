@@ -1,0 +1,18 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "XuanTie.xuantie_c910",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the XuanTie-C910 gpu_cov_gate single-surface candidate.",
+    "The checked-in campaign candidate relies on work/vl_ir_exp/xuantie_c910_gpu_cov_gate_vl plus hello/inst.pat and hello/data.pat runtime staging."
+  ],
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/XuanTie-C910/src/xuantie_c910_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "XuanTie.xuantie_c910",
+    "top_module": "xuantie_c910_gpu_cov_tb"
+  }
+}

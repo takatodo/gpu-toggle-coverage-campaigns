@@ -1,0 +1,6 @@
+{
+  "design": "XuanTie-C906",
+  "name": "c906_default_gate_hold",
+  "notes": "Keep XuanTie-C906 on the unresolved default gate until the project either defines a new default gate or explicitly accepts candidate-only evidence.",
+  "step_mode": "default_gate_hold"
+}

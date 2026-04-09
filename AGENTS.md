@@ -56,6 +56,35 @@
 - 既存のディレクトリ責務に合わない変更は、先に配置を見直してから実装する。
 - 新しい CLI や flow を追加した場合は、少なくとも実行方法が分かる docs を更新する。
 
+## 定量監査
+
+上の注意事項は、少なくとも次の指標で機械監査する。
+
+- `repo_root_python_file_count == 0`
+- `banned_python_filename_count == 0`
+- `cli_with_matching_test_ratio`
+- `cli_with_doc_mention_ratio`
+- `cli_over_300_loc_count`
+- `cli_over_500_loc_count`
+
+source of truth は `work/agents_guideline_audit.json` とし、次のコマンドで再生成する。
+
+```bash
+python3 src/tools/audit_agents_guidelines.py \
+  --json-out work/agents_guideline_audit.json
+```
+
+この監査は hard gate と scoreboard を分けて扱う。
+
+- hard gate:
+  - `repo_root_python_file_count`
+  - `banned_python_filename_count`
+- scoreboard:
+  - test/doc 追従率
+  - 長大 CLI 本数
+
+新しい CLI や flow を追加するときは、少なくとも hard gate を悪化させず、対応する test と docs mention を同じ変更で揃える。
+
 ## 一時コードと生成物
 
 - 短命な検証コードや spike は、本流の実装や repo root に混ぜない。

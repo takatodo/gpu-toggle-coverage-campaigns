@@ -1,0 +1,5 @@
+{
+  "notes": "Stop same-family continuation at C910 and move to the VeeR fallback family instead.",
+  "profile_name": "open_veer_fallback_family",
+  "schema_version": 1
+}

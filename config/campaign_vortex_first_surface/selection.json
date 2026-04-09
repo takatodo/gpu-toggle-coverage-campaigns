@@ -1,0 +1,5 @@
+{
+  "notes": "Keep the Vortex branch active and debug the llc/NVPTX TLS-lowering failure until the first trio can be completed.",
+  "profile_name": "debug_vortex_tls_lowering",
+  "schema_version": 1
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "per_target_ready",
+  "allow_per_target_thresholds": true,
+  "require_matching_thresholds": false,
+  "notes": "Allow per-target semantics and relax threshold-schema matching. This is the first branch that unlocks broader design count."
+}

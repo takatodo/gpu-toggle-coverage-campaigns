@@ -1,0 +1,5 @@
+{
+  "branch_mode": "hold_vortex_first_surface_branch",
+  "name": "hold_vortex_first_surface_branch",
+  "notes": "Keep the Vortex first-surface branch in pre-selection state until the project explicitly chooses Vortex TLS-lowering debug or the XiangShan fallback branch."
+}

@@ -33,10 +33,9 @@ The two reference designs break those assumptions in different ways.
 
 The weakest part of the current roadmap is now different from when this note was opened.
 
-The design change landed, but two weak points remain:
+The design change landed, but one weak point still remains:
 
-- The project does not yet say whether Phase B is complete at `ignore_verilator_internal_final_state` or whether it must reach `strict_final_state`.
-- The current extractor is only proven on the narrow linear guard pattern covered by the new regression; broader `_eval_nba` shapes may still need fresh counterexamples before generalization.
+- The current extractor is only proven on the narrow linear guard pattern covered by the new regression; broader `_eval_nba` shapes may still need fresh counterexamples before generalization. Phase B itself is now considered complete at `phase_b_endpoint`; `strict_final_state` is optional refinement work for Verilator bookkeeping only.
 
 ## Proposed Model
 
@@ -138,6 +137,6 @@ The redesign is good enough when it proves these points in order:
 
 ## Concrete Task List
 
-1. Decide whether Phase B is allowed to stop at internal-only mismatch or whether `strict_final_state` is required.
-2. If `strict_final_state` is required, isolate where `__VicoPhaseResult`, `__VactIterCount`, `__VinactIterCount`, and `__VicoTriggered` diverge and choose whether to normalize or replay them.
-3. If the provisional gate is enough, move effort to the minimal CPU slice and keep the segment extractor narrow until a new counterexample appears.
+1. Keep the segment extractor narrow until a new counterexample appears, and use additional real designs to test whether the guarded-region model still holds.
+2. If `strict_final_state` becomes necessary, isolate where `__VicoPhaseResult`, `__VactIterCount`, `__VinactIterCount`, and `__VicoTriggered` diverge and choose whether to normalize or replay them.
+3. Otherwise, keep effort on supported-flow work and treat `phase_b_endpoint` as the closed Phase B milestone.

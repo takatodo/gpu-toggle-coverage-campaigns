@@ -1,0 +1,6 @@
+{
+  "accept_checkpoint": false,
+  "accept_selected_seed": false,
+  "name": "hold_checkpoint_and_seed",
+  "notes": "Keep the OpenTitan checkpoint and selected non-OpenTitan seed in pre-acceptance state."
+}

@@ -1,0 +1,7 @@
+{
+  "design": "XuanTie-C910",
+  "family": "XuanTie",
+  "name": "debug_c910_hybrid_runtime",
+  "notes": "Keep the same-family line active and debug the C910 hybrid runtime until a ready comparison line exists.",
+  "runtime_mode": "debug_c910_hybrid_runtime"
+}

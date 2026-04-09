@@ -1,0 +1,5 @@
+{
+  "accept_selected_same_family_step": true,
+  "name": "accept_selected_same_family_step",
+  "notes": "Accept the currently selected XuanTie same-family step as checked-in breadth evidence."
+}

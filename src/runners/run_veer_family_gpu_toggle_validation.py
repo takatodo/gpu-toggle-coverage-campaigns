@@ -16,9 +16,11 @@ RTLMETER_ROOT = ROOT_DIR / "third_party/rtlmeter"
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("VeeR-EL2", "VeeR-EH1", "VeeR-EH2")
 DEFAULT_WORK_DIR = ROOT_DIR / "work"
+DEFAULT_STATUS_DIR = ROOT_DIR / "output" / "legacy_validation"
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -83,7 +85,9 @@ def main(argv: list[str]) -> int:
     designs = args.designs or list(DEFAULT_DESIGNS)
     work_dir = args.work_dir.resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
-    json_out = (args.json_out or (work_dir / "veer_family_gpu_toggle_validation.json")).resolve()
+    json_out = (
+        args.json_out or (DEFAULT_STATUS_DIR / "veer_family_gpu_toggle_validation.json")
+    ).resolve()
     reuse_bench_kernel_if_present = args.reuse_bench_kernel_if_present
     if reuse_bench_kernel_if_present is None:
         reuse_bench_kernel_if_present = args.configuration == "gpu_cov_gate"
@@ -154,6 +158,7 @@ def main(argv: list[str]) -> int:
         overall_rc = max(overall_rc, proc.returncode)
 
     payload = {
+        "status_surface": "legacy_sim_accel",
         "case_name": args.case_name,
         "designs": designs,
         "results": results,

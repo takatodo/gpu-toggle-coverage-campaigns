@@ -1,0 +1,7 @@
+{
+  "candidate_threshold_value": 5,
+  "design": "VeeR-EH1",
+  "name": "veer_eh1_candidate_only_threshold5",
+  "notes": "Accept the checked-in threshold=5 candidate-only hybrid win as the first VeeR fallback surface.",
+  "step_mode": "candidate_only_threshold"
+}

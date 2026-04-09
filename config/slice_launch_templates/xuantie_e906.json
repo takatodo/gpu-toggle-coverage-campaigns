@@ -1,0 +1,18 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "XuanTie.xuantie_e906",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the XuanTie-E906 gpu_cov_gate single-surface override.",
+    "The checked-in campaign candidate currently relies on work/vl_ir_exp/xuantie_e906_gpu_cov_gate_vl plus cmark/case.pat runtime staging."
+  ],
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/XuanTie-E906/src/xuantie_e906_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "XuanTie.xuantie_e906",
+    "top_module": "xuantie_e906_gpu_cov_tb"
+  }
+}

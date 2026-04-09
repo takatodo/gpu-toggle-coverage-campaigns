@@ -1,0 +1,6 @@
+{
+  "breadth_mode": "family_pilot_recovery",
+  "family": "XuanTie",
+  "name": "xuantie_family_pilot_recovery",
+  "notes": "Return to family_pilot only if the project rejects both candidate-only E906 evidence and a new E906 default gate."
+}

@@ -1,0 +1,6 @@
+{
+  "design": "Vortex",
+  "name": "vortex_default_gate_hold",
+  "notes": "Keep Vortex on the unresolved default gate while deciding whether a new default gate is needed.",
+  "step_mode": "default_gate_hold"
+}

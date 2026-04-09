@@ -1,0 +1,5 @@
+{
+  "accept_selected_breadth": true,
+  "name": "accept_selected_xuantie_breadth",
+  "notes": "Accept the currently selected XuanTie breadth step as the checked-in non-OpenTitan breadth baseline."
+}

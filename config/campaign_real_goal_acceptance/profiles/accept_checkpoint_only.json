@@ -1,0 +1,6 @@
+{
+  "accept_checkpoint": true,
+  "accept_selected_seed": false,
+  "name": "accept_checkpoint_only",
+  "notes": "Accept the OpenTitan checkpoint but keep the selected non-OpenTitan seed pending."
+}

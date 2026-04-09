@@ -1,0 +1,5 @@
+{
+  "notes": "Accept the checked-in threshold=5 candidate-only hybrid win as the first VeeR fallback surface.",
+  "profile_name": "veer_eh1_candidate_only_threshold5",
+  "schema_version": 1
+}

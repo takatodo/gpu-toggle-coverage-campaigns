@@ -1,0 +1,6 @@
+{
+  "design": "VeeR-EL2",
+  "name": "veer_el2_default_gate_hold",
+  "notes": "Keep VeeR-EL2 on the unresolved default gate while deciding whether a new default gate is needed.",
+  "step_mode": "default_gate_hold"
+}

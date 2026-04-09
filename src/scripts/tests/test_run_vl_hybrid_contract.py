@@ -29,6 +29,42 @@ class RunVlHybridContractTest(unittest.TestCase):
     def setUp(self) -> None:
         self.module = _load_module("run_vl_hybrid_contract_test", MODULE_PATH)
 
+    def test_sanitize_host_only_internals_preserves_dlysched_context_prefix(self) -> None:
+        blob = bytes(range(64))
+        layout = [
+            {"name": "__VdlySched", "offset": 16, "size": 16},
+            {"name": "vlSymsp", "offset": 32, "size": 8},
+            {"name": "vlNamep", "offset": 40, "size": 8},
+        ]
+
+        sanitized, applied = self.module._sanitize_host_only_internals(blob, layout)
+
+        self.assertEqual(sanitized[16:24], blob[16:24])
+        self.assertEqual(sanitized[24:32], b"\x00" * 8)
+        self.assertEqual(sanitized[40:48], b"\x00" * 8)
+        self.assertEqual(sanitized[32:40], blob[32:40])
+        self.assertEqual(
+            applied,
+            [
+                {
+                    "field_name": "__VdlySched",
+                    "offset": 16,
+                    "size": 16,
+                    "sanitized_start": 24,
+                    "sanitized_end": 32,
+                    "preserved_prefix_bytes": 8,
+                },
+                {
+                    "field_name": "vlNamep",
+                    "offset": 40,
+                    "size": 8,
+                    "sanitized_start": 40,
+                    "sanitized_end": 48,
+                    "preserved_prefix_bytes": 0,
+                },
+            ],
+        )
+
     def test_mdir_launch_sequence_is_forwarded_to_env(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -144,6 +180,109 @@ class RunVlHybridContractTest(unittest.TestCase):
             env = seen["env"]
             assert isinstance(env, dict)
             self.assertEqual(env["RUN_VL_HYBRID_KERNELS"], "vl_ico_batch_gpu,vl_nba_comb_batch_gpu")
+
+    def test_sanitize_flag_rewrites_init_state_before_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            mdir = root / "mdir"
+            mdir.mkdir()
+            (mdir / "vl_batch_gpu.cubin").write_bytes(b"fake-cubin")
+            (mdir / "vl_batch_gpu.meta.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "cubin": "vl_batch_gpu.cubin",
+                        "storage_size": 64,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            init_state = root / "init.bin"
+            init_state.write_bytes(bytes(range(64)))
+            hybrid_bin = root / "run_vl_hybrid"
+            hybrid_bin.write_text("#!/bin/sh\n", encoding="utf-8")
+
+            seen: dict[str, object] = {}
+
+            def _fake_prepare(*, mdir: Path, init_state: Path):
+                self.assertEqual(mdir, (root / "mdir").resolve())
+                self.assertEqual(init_state, (root / "init.bin").resolve())
+                sanitized = root / "sanitized.bin"
+                sanitized.write_bytes(b"patched")
+                return sanitized, [
+                    {
+                        "field_name": "__VdlySched",
+                        "offset": 16,
+                        "size": 16,
+                        "sanitized_start": 24,
+                        "sanitized_end": 32,
+                        "preserved_prefix_bytes": 8,
+                    }
+                ]
+
+            def _fake_run(cmd: list[str], check: bool, env: dict[str, str]) -> None:
+                seen["cmd"] = list(cmd)
+                seen["env"] = dict(env)
+
+            argv = [
+                "run_vl_hybrid.py",
+                "--mdir",
+                str(mdir),
+                "--init-state",
+                str(init_state),
+                "--sanitize-host-only-internals",
+            ]
+            with mock.patch.object(self.module, "HYBRID_BIN", hybrid_bin):
+                with mock.patch.object(self.module, "_prepare_sanitized_init_state", side_effect=_fake_prepare):
+                    with mock.patch.object(self.module.subprocess, "run", side_effect=_fake_run):
+                        with mock.patch.object(sys, "argv", argv):
+                            self.module.main()
+
+            env = seen["env"]
+            assert isinstance(env, dict)
+            self.assertEqual(env["RUN_VL_HYBRID_INIT_STATE"], str((root / "sanitized.bin").resolve()))
+            self.assertFalse((root / "sanitized.bin").exists())
+
+    def test_trace_stages_flag_forwards_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            mdir = root / "mdir"
+            mdir.mkdir()
+            (mdir / "vl_batch_gpu.cubin").write_bytes(b"fake-cubin")
+            (mdir / "vl_batch_gpu.meta.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "cubin": "vl_batch_gpu.cubin",
+                        "storage_size": 64,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            hybrid_bin = root / "run_vl_hybrid"
+            hybrid_bin.write_text("#!/bin/sh\n", encoding="utf-8")
+
+            seen: dict[str, object] = {}
+
+            def _fake_run(cmd: list[str], check: bool, env: dict[str, str]) -> None:
+                seen["env"] = dict(env)
+
+            argv = [
+                "run_vl_hybrid.py",
+                "--mdir",
+                str(mdir),
+                "--trace-stages",
+            ]
+            with mock.patch.object(self.module, "HYBRID_BIN", hybrid_bin):
+                with mock.patch.object(self.module.subprocess, "run", side_effect=_fake_run):
+                    with mock.patch.object(sys, "argv", argv):
+                        self.module.main()
+
+            env = seen["env"]
+            assert isinstance(env, dict)
+            self.assertEqual(env["RUN_VL_HYBRID_TRACE_STAGES"], "1")
 
 
 if __name__ == "__main__":

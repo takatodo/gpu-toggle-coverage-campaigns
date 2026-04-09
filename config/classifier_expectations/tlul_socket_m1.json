@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "target": "tlul_socket_m1",
+  "expected_counts": {
+    "reachable": 13,
+    "gpu": 7,
+    "runtime": 6
+  },
+  "required_reasons": [
+    "gpu_reachable",
+    "decl_host_callee",
+    "runtime_prefix"
+  ],
+  "required_entries": [
+    {
+      "name_contains": "___024root___evalP",
+      "placement": "gpu",
+      "reason": "gpu_reachable"
+    },
+    {
+      "name_contains": "___024root___eval_nbaP",
+      "placement": "gpu",
+      "reason": "gpu_reachable"
+    },
+    {
+      "name_contains": "___ico_sequent__TOP__0",
+      "placement": "runtime",
+      "reason": "decl_host_callee",
+      "detail_contains": "assertOnEv"
+    },
+    {
+      "name_contains": "___eval_triggers_vec__act",
+      "placement": "runtime",
+      "reason": "decl_host_callee",
+      "detail_contains": "sc_time_stamp"
+    },
+    {
+      "name_contains": "threadContextp",
+      "placement": "runtime",
+      "reason": "runtime_prefix"
+    },
+    {
+      "name_contains": "___nba_sequent__TOP__2",
+      "placement": "gpu",
+      "reason": "gpu_reachable"
+    }
+  ]
+}

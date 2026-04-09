@@ -1,0 +1,25 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "XiangShan.xiangshan",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the first XiangShan single-surface stock-hybrid trio.",
+    "The checked-in candidate stages program.bin into mdir and relies on XiangShan's built-in ram.cpp helper to load it at startup."
+  ],
+  "enrollment": {
+    "slug": "xiangshan",
+    "mdir_name": "xiangshan_gpu_cov_vl",
+    "runtime_input_type": "runtime_file",
+    "runtime_input_path": "third_party/rtlmeter/designs/XiangShan/tests/hello/program.bin",
+    "runtime_input_name": "program.bin"
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/XiangShan/src/xiangshan_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "XiangShan.xiangshan",
+    "top_module": "xiangshan_gpu_cov_tb"
+  }
+}

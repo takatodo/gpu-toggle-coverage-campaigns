@@ -1,0 +1,6 @@
+{
+  "accept_checkpoint": true,
+  "accept_selected_seed": true,
+  "name": "accept_checkpoint_and_seed",
+  "notes": "Accept both the OpenTitan checkpoint and the selected XuanTie-E902 seed as the current campaign baseline."
+}

@@ -1,0 +1,5 @@
+{
+  "accept_selected_openpiton_first_surface_step": true,
+  "name": "accept_selected_openpiton_first_surface_step",
+  "notes": "Accept the selected OpenPiton first surface as checked-in next-family breadth evidence."
+}

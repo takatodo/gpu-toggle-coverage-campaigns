@@ -35,7 +35,31 @@ def _load_baseline():
     return mod
 
 
-def main() -> int:
+def _default_tb_candidates(baseline: object, slice_name: str) -> list[Path]:
+    opentitan_src = Path(getattr(baseline, "OPENTITAN_SRC"))
+    return [
+        opentitan_src / f"{slice_name}_gpu_cov_tb.sv",
+        opentitan_src / f"{slice_name}_cov_tb.sv",
+    ]
+
+
+def _resolve_tb_path(*, baseline: object, slice_name: str, tb_override: Path | None) -> tuple[Path, Path | None]:
+    if tb_override is not None:
+        tb = tb_override.expanduser().resolve()
+        if not tb.is_file():
+            raise FileNotFoundError(f"TB not found: {tb}")
+        default_tb = next((path.resolve() for path in _default_tb_candidates(baseline, slice_name) if path.is_file()), None)
+        return tb, default_tb
+
+    for candidate in _default_tb_candidates(baseline, slice_name):
+        if candidate.is_file():
+            resolved = candidate.resolve()
+            return resolved, resolved
+    joined = ", ".join(str(path) for path in _default_tb_candidates(baseline, slice_name))
+    raise FileNotFoundError(f"default GPU cov TB not found; looked for: {joined}")
+
+
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--slice-name",
@@ -54,11 +78,31 @@ def main() -> int:
         help="verilator binary (default: $VERILATOR or third_party/verilator/bin/verilator)",
     )
     p.add_argument(
+        "--tb-path",
+        type=Path,
+        default=None,
+        help=(
+            "Top-level testbench source path. Defaults to "
+            "third_party/rtlmeter/designs/OpenTitan/src/<slice-name>_gpu_cov_tb.sv"
+        ),
+    )
+    p.add_argument(
+        "--top-module",
+        default=None,
+        help="Top module name passed to Verilator (default: inferred from --tb-path stem)",
+    )
+    p.add_argument(
+        "--extra-source",
+        action="append",
+        default=[],
+        help="Additional SystemVerilog source to compile alongside the inferred slice sources",
+    )
+    p.add_argument(
         "--force",
         action="store_true",
         help="Remove out-dir before running Verilator",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     baseline = _load_baseline()
     slice_name = str(args.slice_name)
@@ -77,21 +121,35 @@ def main() -> int:
         return 1
 
     rtl = baseline.OPENTITAN_SRC / f"{slice_name}.sv"
-    tb = baseline.OPENTITAN_SRC / f"{slice_name}_gpu_cov_tb.sv"
+    try:
+        tb, default_tb = _resolve_tb_path(
+            baseline=baseline,
+            slice_name=slice_name,
+            tb_override=args.tb_path,
+        )
+    except FileNotFoundError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     if not rtl.is_file():
         print(f"error: RTL not found: {rtl}", file=sys.stderr)
         return 1
-    if not tb.is_file():
-        print(f"error: TB not found: {tb}", file=sys.stderr)
-        return 1
-    sources = baseline._collect_compile_sources(slice_name, rtl, tb)
+    sources = baseline._collect_compile_sources(slice_name, rtl, default_tb or tb)
+    if default_tb is None or tb.resolve() != default_tb.resolve():
+        sources.append(tb.resolve())
+    for raw in args.extra_source:
+        extra = Path(raw).expanduser().resolve()
+        if not extra.is_file():
+            print(f"error: extra source not found: {extra}", file=sys.stderr)
+            return 1
+        sources.append(extra)
+    sources = baseline._dedupe_paths(sources)
 
     if args.force and out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     inc = str(baseline.OPENTITAN_SRC)
-    top = f"{slice_name}_gpu_cov_tb"
+    top = args.top_module or tb.stem
     cmd = [
         str(vlr),
         "--cc",

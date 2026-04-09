@@ -36,6 +36,12 @@
 #define ENV_SYNC_EACH_STEP "RUN_VL_HYBRID_SYNC_EACH_STEP"
 /* Optional untimed launch after init to absorb first-launch / driver latency. */
 #define ENV_WARMUP "RUN_VL_HYBRID_WARMUP"
+/* Optional stage trace to help localize runtime kills / hangs. */
+#define ENV_TRACE_STAGES "RUN_VL_HYBRID_TRACE_STAGES"
+/* Optional override of the requested CUDA stack limit in bytes. */
+#define ENV_STACK_LIMIT_OVERRIDE "RUN_VL_HYBRID_STACK_LIMIT_OVERRIDE"
+/* Optional exit after stack-limit handling, before alloc / launch. */
+#define ENV_STACK_LIMIT_PROBE_ONLY "RUN_VL_HYBRID_STACK_LIMIT_PROBE_ONLY"
 
 static void cuda_fail(const char *file, int line, CUresult err, const char *what) {
   const char *msg = NULL;
@@ -96,7 +102,175 @@ static int parse_patch(const char *arg, Patch *p) {
   return 0;
 }
 
+static int trace_stages_enabled(void) {
+  const char *raw = getenv(ENV_TRACE_STAGES);
+  return raw != NULL && raw[0] != '\0';
+}
+
+static int env_flag_enabled(const char *name) {
+  const char *raw = getenv(name);
+  return raw != NULL && raw[0] != '\0';
+}
+
+static int parse_size_t_env(const char *name, size_t *out) {
+  const char *raw = getenv(name);
+  char *end = NULL;
+  unsigned long long value = 0;
+  if (raw == NULL || raw[0] == '\0')
+    return 0;
+  value = strtoull(raw, &end, 0);
+  if (end == raw || *end != '\0')
+    return -1;
+  *out = (size_t)value;
+  return 1;
+}
+
+static void trace_stage(const char *stage) {
+  if (!trace_stages_enabled())
+    return;
+  fprintf(stderr, "run_vl_hybrid: stage=%s\n", stage);
+  fflush(stderr);
+}
+
+static void trace_function_attr(CUfunction fn, const char *kernel_name,
+                                const char *attr_name,
+                                CUfunction_attribute attr) {
+  if (!trace_stages_enabled())
+    return;
+  int value = 0;
+  CUresult err = cuFuncGetAttribute(&value, attr, fn);
+  if (err != CUDA_SUCCESS) {
+    const char *msg = NULL;
+    cuGetErrorString(err, &msg);
+    fprintf(stderr, "run_vl_hybrid: attr %s %s=error:%d:%s\n", kernel_name,
+            attr_name, (int)err, msg ? msg : "?");
+    return;
+  }
+  fprintf(stderr, "run_vl_hybrid: attr %s %s=%d\n", kernel_name, attr_name,
+          value);
+}
+
+static void trace_function_attrs(CUfunction fn, const char *kernel_name) {
+  if (!trace_stages_enabled())
+    return;
+  trace_function_attr(fn, kernel_name, "MAX_THREADS_PER_BLOCK",
+                      CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK);
+  trace_function_attr(fn, kernel_name, "NUM_REGS",
+                      CU_FUNC_ATTRIBUTE_NUM_REGS);
+  trace_function_attr(fn, kernel_name, "LOCAL_SIZE_BYTES",
+                      CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES);
+  trace_function_attr(fn, kernel_name, "SHARED_SIZE_BYTES",
+                      CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES);
+  trace_function_attr(fn, kernel_name, "CONST_SIZE_BYTES",
+                      CU_FUNC_ATTRIBUTE_CONST_SIZE_BYTES);
+  trace_function_attr(fn, kernel_name, "PTX_VERSION",
+                      CU_FUNC_ATTRIBUTE_PTX_VERSION);
+  trace_function_attr(fn, kernel_name, "BINARY_VERSION",
+                      CU_FUNC_ATTRIBUTE_BINARY_VERSION);
+  trace_function_attr(fn, kernel_name, "CACHE_MODE_CA",
+                      CU_FUNC_ATTRIBUTE_CACHE_MODE_CA);
+#ifdef CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES
+  trace_function_attr(fn, kernel_name, "MAX_DYNAMIC_SHARED_SIZE_BYTES",
+                      CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_PREFERRED_SHARED_MEMORY_CARVEOUT
+  trace_function_attr(fn, kernel_name, "PREFERRED_SHARED_MEMORY_CARVEOUT",
+                      CU_FUNC_ATTRIBUTE_PREFERRED_SHARED_MEMORY_CARVEOUT);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_CLUSTER_SIZE_MUST_BE_SET
+  trace_function_attr(fn, kernel_name, "CLUSTER_SIZE_MUST_BE_SET",
+                      CU_FUNC_ATTRIBUTE_CLUSTER_SIZE_MUST_BE_SET);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_WIDTH
+  trace_function_attr(fn, kernel_name, "REQUIRED_CLUSTER_WIDTH",
+                      CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_WIDTH);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_HEIGHT
+  trace_function_attr(fn, kernel_name, "REQUIRED_CLUSTER_HEIGHT",
+                      CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_HEIGHT);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_DEPTH
+  trace_function_attr(fn, kernel_name, "REQUIRED_CLUSTER_DEPTH",
+                      CU_FUNC_ATTRIBUTE_REQUIRED_CLUSTER_DEPTH);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_NON_PORTABLE_CLUSTER_SIZE_ALLOWED
+  trace_function_attr(fn, kernel_name, "NON_PORTABLE_CLUSTER_SIZE_ALLOWED",
+                      CU_FUNC_ATTRIBUTE_NON_PORTABLE_CLUSTER_SIZE_ALLOWED);
+#endif
+#ifdef CU_FUNC_ATTRIBUTE_CLUSTER_SCHEDULING_POLICY_PREFERENCE
+  trace_function_attr(fn, kernel_name, "CLUSTER_SCHEDULING_POLICY_PREFERENCE",
+                      CU_FUNC_ATTRIBUTE_CLUSTER_SCHEDULING_POLICY_PREFERENCE);
+#endif
+}
+
+static size_t kernel_local_size_bytes(CUfunction fn) {
+  int value = 0;
+  CUresult err =
+      cuFuncGetAttribute(&value, CU_FUNC_ATTRIBUTE_LOCAL_SIZE_BYTES, fn);
+  if (err != CUDA_SUCCESS || value < 0)
+    return 0;
+  return (size_t)value;
+}
+
+static int maybe_raise_stack_limit_for_kernels(CUfunction *kfns, int nk) {
+  size_t required_stack = 0;
+  size_t target_stack = 0;
+  for (int i = 0; i < nk; i++) {
+    size_t local_size = kernel_local_size_bytes(kfns[i]);
+    if (local_size > required_stack)
+      required_stack = local_size;
+  }
+  if (required_stack == 0)
+    return 0;
+
+  target_stack = required_stack;
+  {
+    size_t override_stack = 0;
+    int override_status = parse_size_t_env(ENV_STACK_LIMIT_OVERRIDE, &override_stack);
+    if (override_status < 0) {
+      fprintf(stderr, "invalid %s='%s'\n", ENV_STACK_LIMIT_OVERRIDE,
+              getenv(ENV_STACK_LIMIT_OVERRIDE));
+      return 2;
+    }
+    if (override_status > 0)
+      target_stack = override_stack;
+  }
+
+  size_t current_limit = 0;
+  CUDA_CHECK(cuCtxGetLimit(&current_limit, CU_LIMIT_STACK_SIZE));
+  if (trace_stages_enabled()) {
+    fprintf(stderr,
+            "run_vl_hybrid: ctx_limit STACK_SIZE current=%zu required=%zu target=%zu\n",
+            current_limit, required_stack, target_stack);
+  }
+  if (target_stack <= current_limit)
+    return 0;
+  {
+    CUresult err = cuCtxSetLimit(CU_LIMIT_STACK_SIZE, target_stack);
+    if (err != CUDA_SUCCESS) {
+      const char *msg = NULL;
+      cuGetErrorString(err, &msg);
+      if (trace_stages_enabled()) {
+        fprintf(stderr,
+                "run_vl_hybrid: ctx_limit STACK_SIZE set_failed target=%zu err=%d:%s\n",
+                target_stack, (int)err, msg ? msg : "?");
+      }
+      return 1;
+    }
+  }
+  if (trace_stages_enabled()) {
+    size_t updated_limit = 0;
+    CUDA_CHECK(cuCtxGetLimit(&updated_limit, CU_LIMIT_STACK_SIZE));
+    fprintf(stderr, "run_vl_hybrid: ctx_limit STACK_SIZE updated=%zu\n",
+            updated_limit);
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
+  if (trace_stages_enabled())
+    setvbuf(stderr, NULL, _IONBF, 0);
+
   if (argc < 4) {
     fprintf(stderr,
             "Usage: %s <cubin> <storage_bytes> <nstates> [block] [steps] "
@@ -151,28 +325,37 @@ int main(int argc, char **argv) {
   size_t storage = (size_t)storage_ull;
   size_t total = storage * (size_t)nstates;
 
+  trace_stage("before_cuInit");
   {
     CUresult err = cuInit(0);
     if (err != CUDA_SUCCESS)
       cuda_fail(__FILE__, __LINE__, err, "cuInit");
   }
+  trace_stage("after_cuInit");
 
   CUdevice dev;
   {
+    trace_stage("before_cuDeviceGet");
     CUresult err = cuDeviceGet(&dev, 0);
     if (err != CUDA_SUCCESS)
       cuda_fail(__FILE__, __LINE__, err, "cuDeviceGet");
   }
+  trace_stage("after_cuDeviceGet");
 
   char name[256];
   CUDA_CHECK(cuDeviceGetName(name, sizeof(name), dev));
   printf("device 0: %s\n", name);
+  fflush(stdout);
 
+  trace_stage("before_cuCtxCreate");
   CUcontext ctx;
   CUDA_CHECK(cuCtxCreate(&ctx, 0, dev));
+  trace_stage("after_cuCtxCreate");
 
+  trace_stage("before_cuModuleLoad");
   CUmodule mod;
   CUDA_CHECK(cuModuleLoad(&mod, cubin_path));
+  trace_stage("after_cuModuleLoad");
 
   CUfunction kfns[MAX_KERNEL_CHAIN];
   int nk = 0;
@@ -206,25 +389,40 @@ int main(int argc, char **argv) {
         free(buf);
         return 1;
       }
+      trace_function_attrs(kfns[nk], tok);
       nk++;
     }
     free(buf);
   } else {
     CUDA_CHECK(cuModuleGetFunction(&kfns[0], mod, "vl_eval_batch_gpu"));
+    trace_function_attrs(kfns[0], "vl_eval_batch_gpu");
     nk = 1;
   }
   if (nk < 1) {
     fprintf(stderr, "no kernels to launch\n");
     return 1;
   }
+  {
+    int stack_limit_status = maybe_raise_stack_limit_for_kernels(kfns, nk);
+    if (env_flag_enabled(ENV_STACK_LIMIT_PROBE_ONLY))
+      return stack_limit_status;
+    if (stack_limit_status != 0) {
+      fprintf(stderr, "stack-limit setup failed with status=%d\n", stack_limit_status);
+      return stack_limit_status;
+    }
+  }
+  trace_stage("after_kernel_resolution");
 
   CUdeviceptr d_storage = 0;
+  trace_stage("before_cuMemAlloc");
   CUDA_CHECK(cuMemAlloc(&d_storage, total));
   CUDA_CHECK(cuMemsetD8(d_storage, 0, total));
+  trace_stage("after_cuMemAlloc");
 
   {
     const char *init_state_path = getenv(ENV_INIT_STATE);
     if (init_state_path && init_state_path[0] != '\0') {
+      trace_stage("before_init_state_upload");
       FILE *fp = fopen(init_state_path, "rb");
       if (!fp) {
         fprintf(stderr, "failed to open %s=%s\n", ENV_INIT_STATE, init_state_path);
@@ -275,6 +473,7 @@ int main(int argc, char **argv) {
         }
       }
       free(buf);
+      trace_stage("after_init_state_upload");
     }
   }
 
@@ -288,16 +487,19 @@ int main(int argc, char **argv) {
 
   struct timespec wall0, wall1;
   clock_gettime(CLOCK_MONOTONIC, &wall0);
+  trace_stage("before_launch_loop");
 
   float gpu_kernel_ms_sum = 0.f;
   const int sync_each_step = getenv(ENV_SYNC_EACH_STEP) != NULL;
 
   if (getenv(ENV_WARMUP) != NULL) {
+    trace_stage("before_warmup");
     for (int k = 0; k < nk; k++) {
       CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0, params,
                                 NULL));
     }
     CUDA_CHECK(cuCtxSynchronize());
+    trace_stage("after_warmup");
   }
 
   if (sync_each_step) {
@@ -312,12 +514,20 @@ int main(int argc, char **argv) {
                                 &patches[i].val, 1));
       }
       CUDA_CHECK(cuEventRecord(ev_start, 0));
+      if (step == 0U)
+        trace_stage("before_first_kernel_launch");
       for (int k = 0; k < nk; k++) {
         CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0,
                                   params, NULL));
       }
+      if (step == 0U)
+        trace_stage("after_first_kernel_launch");
       CUDA_CHECK(cuEventRecord(ev_stop, 0));
+      if (step == 0U)
+        trace_stage("before_first_step_sync");
       CUDA_CHECK(cuCtxSynchronize());
+      if (step == 0U)
+        trace_stage("after_first_step_sync");
       float step_ms = 0.f;
       CUDA_CHECK(cuEventElapsedTime(&step_ms, ev_start, ev_stop));
       gpu_kernel_ms_sum += step_ms;
@@ -339,13 +549,19 @@ int main(int argc, char **argv) {
         CUDA_CHECK(cuEventRecord(ev_start, 0));
         recorded_start = 1;
       }
+      if (step == 0U)
+        trace_stage("before_first_kernel_launch");
       for (int k = 0; k < nk; k++) {
         CUDA_CHECK(cuLaunchKernel(kfns[k], grid, 1, 1, block, 1, 1, 0, 0,
                                   params, NULL));
       }
+      if (step == 0U)
+        trace_stage("after_first_kernel_launch");
     }
     CUDA_CHECK(cuEventRecord(ev_stop, 0));
+    trace_stage("before_final_sync");
     CUDA_CHECK(cuCtxSynchronize());
+    trace_stage("after_final_sync");
     CUDA_CHECK(cuEventElapsedTime(&gpu_kernel_ms_sum, ev_start, ev_stop));
   }
 
@@ -383,9 +599,11 @@ int main(int argc, char **argv) {
          us_per_state);
   printf("wall_time_ms: %.3f  (host; one GPU sync unless %s=1)\n", wall_ms,
          ENV_SYNC_EACH_STEP);
+  trace_stage("after_launch_loop");
 
   const char *dump_path = getenv(ENV_DUMP_STATE);
   if (dump_path && dump_path[0] != '\0') {
+    trace_stage("before_dump_state");
     unsigned char *host = (unsigned char *)malloc(total);
     if (!host) {
       fprintf(stderr, "malloc failed for %zu-byte state dump\n", total);
@@ -407,9 +625,12 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("state_dump: %s (%zu bytes)\n", dump_path, total);
+    trace_stage("after_dump_state");
   }
 
+  trace_stage("before_cleanup");
   CUDA_CHECK(cuMemFree(d_storage));
   CUDA_CHECK(cuCtxDestroy(ctx));
+  trace_stage("after_cleanup");
   return 0;
 }

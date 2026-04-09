@@ -102,6 +102,8 @@ class RunSocketM1StockHybridValidationTest(unittest.TestCase):
                 "32",
                 "--steps",
                 "2",
+                "--campaign-threshold-bits",
+                "5",
                 "--patch",
                 "4:0xff",
                 "--json-out",
@@ -122,19 +124,88 @@ class RunSocketM1StockHybridValidationTest(unittest.TestCase):
             self.assertEqual(rc, 0)
             payload = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(payload["status"], "ok")
+            self.assertEqual(payload["schema_version"], 1)
             self.assertEqual(payload["target"], "tlul_socket_m1")
             self.assertEqual(payload["clock_ownership"], "tb_timed_coroutine")
+            self.assertEqual(payload["acceptance_gate"], "phase_b_endpoint")
             self.assertEqual(payload["outputs"]["done_o"], 1)
             self.assertEqual(payload["outputs"]["cfg_signature_o"], 0x12345678)
             self.assertEqual(payload["toggle_coverage"]["bits_hit"], 8)
             self.assertTrue(payload["toggle_coverage"]["any_hit"])
+            self.assertEqual(
+                payload["campaign_threshold"],
+                {
+                    "kind": "toggle_bits_hit",
+                    "value": 5,
+                    "aggregation": "bitwise_or_across_trials",
+                },
+            )
+            self.assertEqual(payload["campaign_measurement"]["bits_hit"], 8)
+            self.assertTrue(payload["campaign_measurement"]["threshold_satisfied"])
+            self.assertEqual(payload["campaign_measurement"]["wall_time_ms"], 5.5)
+            self.assertEqual(payload["campaign_measurement"]["steps_executed"], 2)
+            self.assertEqual(
+                payload["artifacts"]["classifier_report"],
+                str((mdir / "vl_classifier_report.json").resolve()),
+            )
             self.assertEqual(payload["performance"]["device_name"], "Demo GPU")
             self.assertEqual(payload["performance"]["runner_shape"]["kernels_per_step"], 5)
             self.assertEqual(payload["performance"]["throughput"]["kernel_launches"], 10)
+            self.assertIn("Phase B is complete at phase_b_endpoint", payload["caveats"][1])
             self.assertAlmostEqual(
                 payload["performance"]["throughput"]["state_steps_per_second"],
                 16000.0,
             )
+
+    def test_runner_keeps_campaign_schema_on_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            mdir = root / "mdir"
+            mdir.mkdir()
+            json_out = root / "validation.json"
+
+            def _fake_run(cmd: list[str], **kwargs):
+                return mock.Mock(
+                    returncode=9,
+                    stdout="device 0: Demo GPU\n",
+                    stderr="fatal: simulated failure\n",
+                )
+
+            argv = [
+                "run_socket_m1_stock_hybrid_validation.py",
+                "--mdir",
+                str(mdir),
+                "--steps",
+                "7",
+                "--campaign-threshold-bits",
+                "5",
+                "--json-out",
+                str(json_out),
+            ]
+            with mock.patch.object(self.module.subprocess, "run", side_effect=_fake_run):
+                with mock.patch.object(sys, "argv", argv):
+                    rc = self.module.main(sys.argv[1:])
+
+            self.assertEqual(rc, 9)
+            payload = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(payload["schema_version"], 1)
+            self.assertEqual(payload["status"], "error")
+            self.assertEqual(
+                payload["campaign_threshold"],
+                {
+                    "kind": "toggle_bits_hit",
+                    "value": 5,
+                    "aggregation": "bitwise_or_across_trials",
+                },
+            )
+            self.assertEqual(payload["campaign_measurement"]["bits_hit"], 0)
+            self.assertFalse(payload["campaign_measurement"]["threshold_satisfied"])
+            self.assertIsNone(payload["campaign_measurement"]["wall_time_ms"])
+            self.assertEqual(payload["campaign_measurement"]["steps_executed"], 7)
+            self.assertEqual(payload["toggle_coverage"]["bits_hit"], 0)
+            self.assertEqual(payload["toggle_coverage"]["words_nonzero"], 0)
+            self.assertIn("device 0: Demo GPU", payload["stdout_tail"])
+            self.assertIn("simulated failure", payload["stderr_tail"])
 
 
 if __name__ == "__main__":

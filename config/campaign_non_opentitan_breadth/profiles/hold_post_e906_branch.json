@@ -1,0 +1,5 @@
+{
+  "branch_mode": "hold_post_e906_branch",
+  "name": "hold_post_e906_branch",
+  "notes": "Keep the post-E906 non-OpenTitan breadth branch in pre-selection state."
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "minimum_strong_margin": 2.0,
+  "scenarios": [
+    {
+      "name": "checked_in_common_v1",
+      "label": "checked-in common threshold v1",
+      "policy_mode": "common",
+      "paths": [
+        "output/validation/socket_m1_time_to_threshold_comparison.json",
+        "output/validation/tlul_fifo_sync_time_to_threshold_comparison.json"
+      ]
+    },
+    {
+      "name": "candidate_common_threshold5",
+      "label": "common raw-bits threshold=5 candidate",
+      "policy_mode": "common",
+      "paths": [
+        "output/validation/socket_m1_time_to_threshold_comparison_threshold5.json",
+        "output/validation/tlul_fifo_sync_time_to_threshold_comparison_threshold5.json"
+      ]
+    },
+    {
+      "name": "candidate_design_specific_minimal_progress",
+      "label": "socket_m1 threshold5 + tlul_fifo_sync seq1 threshold24",
+      "policy_mode": "per_target",
+      "paths": [
+        "output/validation/socket_m1_time_to_threshold_comparison_threshold5.json",
+        "output/validation/tlul_fifo_sync_time_to_threshold_comparison_seq1_threshold24.json"
+      ]
+    }
+  ]
+}

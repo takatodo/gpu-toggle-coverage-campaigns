@@ -1,0 +1,16 @@
+{
+  "allow_per_target_thresholds": true,
+  "extra_comparison_paths": [
+    "output/validation/tlul_request_loopback_time_to_threshold_comparison.json",
+    "output/validation/tlul_err_time_to_threshold_comparison.json",
+    "output/validation/tlul_sink_time_to_threshold_comparison.json",
+    "output/validation/tlul_socket_1n_time_to_threshold_comparison.json",
+    "output/validation/tlul_fifo_async_time_to_threshold_comparison.json",
+    "output/validation/xbar_main_time_to_threshold_comparison.json",
+    "output/validation/xbar_peri_time_to_threshold_comparison.json"
+  ],
+  "notes": "Allow per-target semantics and relax threshold-schema matching. This is the first branch that unlocks broader design count.",
+  "profile_name": "per_target_ready",
+  "require_matching_thresholds": false,
+  "schema_version": 1
+}

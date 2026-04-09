@@ -1,0 +1,45 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "OpenPiton.openpiton",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the first OpenPiton single-surface stock-hybrid trio.",
+    "The checked-in candidate stages hello/mem.bin into mdir and preloads gpu_cov_visible_mem through a descriptor-backed memory_image path.",
+    "hello/mem.bin reaches the checked-in threshold after a single replayed state-step, so the default stock-hybrid shape is kept at 1x1 to avoid needless GPU overhead."
+  ],
+  "enrollment": {
+    "slug": "openpiton",
+    "mdir_name": "openpiton_gpu_cov_vl",
+    "runtime_input_type": "memory_image",
+    "runtime_input_path": "third_party/rtlmeter/designs/OpenPiton/tests/hello/mem.bin",
+    "runtime_input_format": "bin",
+    "runtime_input_target": {
+      "kind": "memory-array-preload-v1",
+      "name": "openpiton_gpu_cov_tb_openpiton_mem",
+      "description": "OpenPiton visible fake_mem_ctrl preload target",
+      "target_path": "openpiton_gpu_cov_tb.dut.system.chipset.chipset_impl.fake_mem_ctrl.gpu_cov_visible_mem",
+      "word_bits": 64,
+      "depth": 2048,
+      "base_addr": 0,
+      "address_unit_bytes": 8,
+      "endianness": "little"
+    },
+    "runtime_input_patch_bytes": [
+      {
+        "offset": 1664,
+        "value": 1,
+        "width_bytes": 8,
+        "endianness": "little"
+      }
+    ]
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/OpenPiton/src/common/openpiton_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 1,
+    "gpu_sequential_steps": 1,
+    "target": "OpenPiton.openpiton",
+    "top_module": "openpiton_gpu_cov_tb"
+  }
+}

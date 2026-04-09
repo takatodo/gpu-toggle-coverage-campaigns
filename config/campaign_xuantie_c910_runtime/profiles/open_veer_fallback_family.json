@@ -1,0 +1,6 @@
+{
+  "family": "VeeR",
+  "name": "open_veer_fallback_family",
+  "notes": "Stop same-family continuation at C910 and move to the VeeR fallback family instead.",
+  "runtime_mode": "open_fallback_family"
+}

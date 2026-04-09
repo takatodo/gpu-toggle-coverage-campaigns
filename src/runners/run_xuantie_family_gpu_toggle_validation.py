@@ -15,6 +15,7 @@ ROOT_DIR = SCRIPT_DIR.parent.parent
 BASELINE_RUNNER = SCRIPT_DIR / "run_rtlmeter_gpu_toggle_baseline.py"
 DEFAULT_DESIGNS = ("XuanTie-E902", "XuanTie-E906")
 DEFAULT_WORK_DIR = ROOT_DIR / "work"
+DEFAULT_STATUS_DIR = ROOT_DIR / "output" / "legacy_validation"
 DEFAULT_TESTS = {
     "XuanTie-E902": "memcpy",
     "XuanTie-E906": "cmark",
@@ -22,6 +23,7 @@ DEFAULT_TESTS = {
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -89,7 +91,9 @@ def main(argv: list[str]) -> int:
     designs = args.designs or list(DEFAULT_DESIGNS)
     work_dir = args.work_dir.resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
-    json_out = (args.json_out or (work_dir / "xuantie_family_gpu_toggle_validation.json")).resolve()
+    json_out = (
+        args.json_out or (DEFAULT_STATUS_DIR / "xuantie_family_gpu_toggle_validation.json")
+    ).resolve()
     reuse_bench_kernel_if_present = args.reuse_bench_kernel_if_present
     if reuse_bench_kernel_if_present is None:
         reuse_bench_kernel_if_present = args.configuration == "gpu_cov_gate"
@@ -186,6 +190,7 @@ def main(argv: list[str]) -> int:
         results.append(entry)
 
     payload = {
+        "status_surface": "legacy_sim_accel",
         "configuration": args.configuration,
         "designs": designs,
         "results": results,

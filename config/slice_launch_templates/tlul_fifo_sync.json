@@ -98,7 +98,16 @@
     "coverage_tb_path": "third_party/rtlmeter/designs/OpenTitan/src/tlul_fifo_sync_gpu_cov_tb.sv",
     "cpu_reps": 1,
     "dead_word_bias": true,
-    "debug_internal_output_names": [],
+    "debug_internal_output_names": [
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT____Vcellout__reqfifo__rvalid_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT____Vcellout__reqfifo__wready_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT____Vcellout__rspfifo__rvalid_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT____Vcellout__rspfifo__wready_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT__reqfifo__DOT__full_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT__reqfifo__DOT__depth_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT__rspfifo__DOT__full_o",
+      "tlul_fifo_sync_gpu_cov_tb__DOT__core__DOT__dut__DOT__rspfifo__DOT__depth_o"
+    ],
     "driver_defaults": {},
     "global_top_k": 128,
     "gpu_nstates": 32,

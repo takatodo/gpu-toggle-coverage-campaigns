@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "name": "common_v1_hold",
+  "allow_per_target_thresholds": false,
+  "require_matching_thresholds": true,
+  "notes": "Current checked-in policy: keep the common v1 threshold and require matching threshold schema across targets."
+}

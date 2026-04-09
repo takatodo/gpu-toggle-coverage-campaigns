@@ -1,0 +1,5 @@
+{
+  "name": "hold_c910_runtime_branch",
+  "notes": "Keep the C910 runtime branch in pre-selection state until the project explicitly chooses runtime debugging or the VeeR fallback family.",
+  "runtime_mode": "hold_c910_runtime_branch"
+}

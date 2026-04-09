@@ -1,0 +1,6 @@
+{
+  "design": "VeeR-EH1",
+  "name": "veer_eh1_default_gate_hold",
+  "notes": "Keep VeeR-EH1 on the unresolved default gate until the project either defines a new default gate or explicitly accepts candidate-only evidence.",
+  "step_mode": "default_gate_hold"
+}

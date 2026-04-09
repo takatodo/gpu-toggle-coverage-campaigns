@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import importlib.util
+import json
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
+MODULE_PATH = SCRIPT_DIR.parent / "runners" / "run_caliptra_cpu_baseline_validation.py"
+
+
+def _load_module(name: str, path: Path):
+    module_dir = str(path.parent)
+    if module_dir not in sys.path:
+        sys.path.insert(0, module_dir)
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+
+class RunCaliptraCpuBaselineValidationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.module = _load_module("run_caliptra_cpu_baseline_validation_test", MODULE_PATH)
+
+    def test_runner_delegates_to_enrollment_common(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            mdir = root / "mdir"
+            template = root / "template.json"
+            program_hex = root / "program.hex"
+            dccm_hex = root / "dccm.hex"
+            iccm_hex = root / "iccm.hex"
+            mailbox_hex = root / "mailbox.hex"
+            json_out = root / "baseline.json"
+            template.write_text(
+                json.dumps(
+                    {
+                        "status": "candidate_non_opentitan_single_surface",
+                        "enrollment": {
+                            "slug": "caliptra",
+                            "mdir_name": "caliptra_gpu_cov_vl",
+                            "runtime_input_type": "runtime_file",
+                            "runtime_input_path": "unused",
+                            "runtime_input_name": "program.hex",
+                        },
+                        "runner_args_template": {
+                            "top_module": "caliptra_gpu_cov_tb",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            for path in (program_hex, dccm_hex, iccm_hex, mailbox_hex):
+                path.write_text("00\n", encoding="utf-8")
+
+            with mock.patch.object(
+                self.module,
+                "ensure_runtime_input",
+                return_value=({"runtime_file": str(program_hex), "runtime_file_name": "program.hex"}, []),
+            ) as ensure_mock, mock.patch.object(
+                self.module,
+                "run_cpu_baseline_validation",
+                return_value={"status": "ok"},
+            ) as run_mock:
+                rc = self.module.main(
+                    [
+                        "--mdir",
+                        str(mdir),
+                        "--template",
+                        str(template),
+                        "--program-hex",
+                        str(program_hex),
+                        "--dccm-hex",
+                        str(dccm_hex),
+                        "--iccm-hex",
+                        str(iccm_hex),
+                        "--mailbox-hex",
+                        str(mailbox_hex),
+                        "--json-out",
+                        str(json_out),
+                    ]
+                )
+
+            self.assertEqual(rc, 0)
+            ensure_mock.assert_called_once()
+            self.assertEqual(ensure_mock.call_args.kwargs["runtime_input_type"], "runtime_file")
+            self.assertEqual(ensure_mock.call_args.kwargs["runtime_input_path"], program_hex.resolve())
+            self.assertEqual(
+                ensure_mock.call_args.kwargs["runtime_input_companion_paths"],
+                [dccm_hex.resolve(), iccm_hex.resolve(), mailbox_hex.resolve()],
+            )
+            run_mock.assert_called_once()
+            self.assertEqual(run_mock.call_args.kwargs["slug"], "caliptra")
+            self.assertEqual(run_mock.call_args.kwargs["json_out"], json_out.resolve())
+
+
+if __name__ == "__main__":
+    unittest.main()

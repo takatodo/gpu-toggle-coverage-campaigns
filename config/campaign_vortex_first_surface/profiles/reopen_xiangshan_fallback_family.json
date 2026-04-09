@@ -1,0 +1,6 @@
+{
+  "branch_mode": "reopen_xiangshan_fallback_family",
+  "family": "XiangShan",
+  "name": "reopen_xiangshan_fallback_family",
+  "notes": "Stop advancing Vortex for now and reopen the blocked XiangShan fallback family instead."
+}

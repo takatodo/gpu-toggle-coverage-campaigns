@@ -1,0 +1,29 @@
+{
+  "schema_version": "rtlmeter-design-launch-template-v1",
+  "target": "Vortex.vortex",
+  "status": "candidate_non_opentitan_single_surface",
+  "notes": [
+    "Minimal stock-Verilator timed-TB template for the first Vortex single-surface stock-hybrid trio.",
+    "The checked-in candidate stages init.bin plus companion post.bin and dcrs.bin into mdir so the gpu_cov testbench can run under the generic host-probe and host->GPU flow."
+  ],
+  "enrollment": {
+    "slug": "vortex",
+    "mdir_name": "vortex_gpu_cov_vl",
+    "runtime_input_type": "runtime_file",
+    "runtime_input_path": "third_party/rtlmeter/designs/Vortex/tests/hello/init.bin",
+    "runtime_input_name": "init.bin",
+    "runtime_input_companion_paths": [
+      "third_party/rtlmeter/designs/Vortex/tests/hello/post.bin",
+      "third_party/rtlmeter/designs/Vortex/tests/hello/dcrs.bin"
+    ]
+  },
+  "runner_args_template": {
+    "coverage_tb_path": "third_party/rtlmeter/designs/Vortex/src/vortex_gpu_cov_tb.sv",
+    "debug_internal_output_names": [],
+    "driver_defaults": {},
+    "gpu_nstates": 8,
+    "gpu_sequential_steps": 56,
+    "target": "Vortex.vortex",
+    "top_module": "vortex_gpu_cov_tb"
+  }
+}

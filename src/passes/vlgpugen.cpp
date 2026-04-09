@@ -25,6 +25,7 @@
  *   make -C src/passes
  */
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -84,6 +85,11 @@ static cl::opt<std::string> KernelManifestOut(
     cl::desc("With --kernel-split=phases, write emitted split-kernel order to this path (UTF-8 JSON)"),
     cl::value_desc("path"),
     cl::init(""));
+static cl::opt<std::string> ClassifierReportOut(
+    "classifier-report-out",
+    cl::desc("Write a machine-readable GPU/runtime placement report to this path (UTF-8 JSON)"),
+    cl::value_desc("path"),
+    cl::init(""));
 
 static constexpr StringLiteral NVPTX_TRIPLE    = "nvptx64-nvidia-cuda";
 static constexpr StringLiteral NVPTX_DATALAYOUT = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64";
@@ -97,13 +103,23 @@ static void functionToString(const Function &F, std::string &Out) {
     F.print(OS);
 }
 
-static bool isForceInclude(StringRef Name) {
-    return Name.contains("___ico_sequent") || Name.contains("___nba_comb");
+static const char *matchForceIncludePattern(StringRef Name) {
+    static const char *Patterns[] = {"___ico_sequent", "___nba_comb"};
+    for (const char *Pattern : Patterns)
+        if (Name.contains(Pattern))
+            return Pattern;
+    return nullptr;
 }
 
-static bool isRuntimeFunction(const Function &F, const std::string &BodyStr) {
-    StringRef Name = F.getName();
-    if (isForceInclude(Name)) return false;
+static bool isForceInclude(StringRef Name) {
+    return matchForceIncludePattern(Name) != nullptr;
+}
+
+static bool isRootLocalDesignFunction(StringRef Name) {
+    return Name.contains("___024root___");
+}
+
+static const char *matchRuntimePrefix(StringRef Name) {
     static const char *Prefixes[] = {
         "_ZN9Verilated",  "_ZNK9Verilated",
         "_ZN16VerilatedContext", "_ZNK16VerilatedContext",
@@ -112,11 +128,32 @@ static bool isRuntimeFunction(const Function &F, const std::string &BodyStr) {
         "_Z13sc_time_stamp", "_Z15vl_time_stamp", "__cxa_", "_ZTHN",
     };
     for (const char *P : Prefixes)
-        if (Name.starts_with(P)) return true;
-    if (BodyStr.find("@_ZGVZ")           != std::string::npos) return true;
-    if (BodyStr.find("VerilatedSyms")     != std::string::npos) return true;
-    if (BodyStr.find("_gpu_cov_tb__Syms") != std::string::npos) return true;
-    return false;
+        if (Name.starts_with(P))
+            return P;
+    return nullptr;
+}
+
+struct ClassificationReason {
+    std::string Category;
+    std::string Detail;
+};
+
+static std::optional<ClassificationReason> classifyRuntimeReason(const Function &F,
+                                                                const std::string &BodyStr) {
+    StringRef Name = F.getName();
+    if (isForceInclude(Name))
+        return std::nullopt;
+    if (isRootLocalDesignFunction(Name))
+        return std::nullopt;
+    if (const char *Prefix = matchRuntimePrefix(Name))
+        return ClassificationReason{"runtime_prefix", Prefix};
+    if (BodyStr.find("@_ZGVZ") != std::string::npos)
+        return ClassificationReason{"runtime_static_guard", "@_ZGVZ"};
+    if (BodyStr.find("VerilatedSyms") != std::string::npos)
+        return ClassificationReason{"runtime_syms_reference", "VerilatedSyms"};
+    if (BodyStr.find("_gpu_cov_tb__Syms") != std::string::npos)
+        return ClassificationReason{"runtime_syms_reference", "_gpu_cov_tb__Syms"};
+    return std::nullopt;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,12 +215,15 @@ static bool hostLikeDecl(const Function *F) {
 /// Phase E: any function in Reach that directly calls a host-like declare is treated as runtime
 /// (conservative; complements body-string isRuntimeFunction).
 static void mergeRuntimeViaDeclCalls(const DenseSet<Function *> &Reach,
-                                     DenseSet<Function *> &RuntimeFuncs) {
+                                     DenseSet<Function *> &RuntimeFuncs,
+                                     DenseMap<Function *, ClassificationReason> &Reasons) {
     bool Changed = true;
     while (Changed) {
         Changed = false;
         for (Function *F : Reach) {
             if (RuntimeFuncs.count(F))
+                continue;
+            if (isRootLocalDesignFunction(F->getName()))
                 continue;
             for (BasicBlock &BB : *F)
                 for (Instruction &I : BB)
@@ -192,12 +232,19 @@ static void mergeRuntimeViaDeclCalls(const DenseSet<Function *> &Reach,
                                 CB->getCalledOperand()->stripPointerCasts()))
                             if (Callee->isDeclaration() && hostLikeDecl(Callee)) {
                                 RuntimeFuncs.insert(F);
+                                Reasons[F] = {"decl_host_callee", Callee->getName().str()};
                                 Changed = true;
                                 goto NextF;
                             }
         NextF:;
         }
     }
+}
+
+static ClassificationReason classifyGpuReason(const Function &F) {
+    if (const char *Pattern = matchForceIncludePattern(F.getName()))
+        return {"force_include", Pattern};
+    return {"gpu_reachable", "reachable_from_eval"};
 }
 
 static void reportAnalyzePhases(Module &M, const DenseSet<Function *> &Reach) {
@@ -319,6 +366,89 @@ static int writeAnalyzePhasesJson(Module &M, const DenseSet<Function *> &Reach, 
     OS << "\n  }\n}\n";
     OS.flush();
     outs() << "analyze-phases-json: " << Path << "\n";
+    return 0;
+}
+
+static int writeClassifierReportJson(
+    const DenseSet<Function *> &Reach,
+    const DenseSet<Function *> &RuntimeFuncs,
+    const DenseMap<Function *, ClassificationReason> &RuntimeReasons,
+    Function *EvalFn,
+    std::optional<int64_t> VlOff,
+    bool DeclRuntimeMergeEnabled,
+    const std::string &Path) {
+    std::error_code EC;
+    raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+    if (EC) {
+        errs() << "error: cannot open --classifier-report-out " << Path << ": "
+               << EC.message() << "\n";
+        return 1;
+    }
+
+    struct Row {
+        std::string Name;
+        std::string Placement;
+        ClassificationReason Reason;
+    };
+
+    SmallVector<Row, 64> Rows;
+    Rows.reserve(Reach.size());
+    for (Function *F : Reach) {
+        Row R;
+        R.Name = F->getName().str();
+        if (RuntimeFuncs.count(F)) {
+            R.Placement = "runtime";
+            auto It = RuntimeReasons.find(F);
+            if (It != RuntimeReasons.end())
+                R.Reason = It->second;
+            else
+                R.Reason = {"runtime_unknown", ""};
+        } else {
+            R.Placement = "gpu";
+            R.Reason = classifyGpuReason(*F);
+        }
+        Rows.push_back(std::move(R));
+    }
+    llvm::sort(Rows, [](const Row &A, const Row &B) { return A.Name < B.Name; });
+
+    OS << "{\n";
+    OS << "  \"schema_version\": 1,\n";
+    OS << "  \"eval_function\": ";
+    writeJsonString(OS, EvalFn->getName());
+    OS << ",\n";
+    OS << "  \"decl_runtime_merge_enabled\": "
+       << (DeclRuntimeMergeEnabled ? "true" : "false") << ",\n";
+    OS << "  \"vl_symsp_offset\": ";
+    if (VlOff)
+        OS << *VlOff;
+    else
+        OS << "null";
+    OS << ",\n";
+    OS << "  \"counts\": {\n";
+    OS << "    \"reachable\": " << Reach.size() << ",\n";
+    OS << "    \"gpu\": " << (Reach.size() - RuntimeFuncs.size()) << ",\n";
+    OS << "    \"runtime\": " << RuntimeFuncs.size() << "\n";
+    OS << "  },\n";
+    OS << "  \"functions\": [";
+    for (size_t I = 0; I < Rows.size(); ++I) {
+        if (I > 0)
+            OS << ',';
+        OS << "\n    {\n";
+        OS << "      \"name\": ";
+        writeJsonString(OS, Rows[I].Name);
+        OS << ",\n      \"placement\": ";
+        writeJsonString(OS, Rows[I].Placement);
+        OS << ",\n      \"reason\": ";
+        writeJsonString(OS, Rows[I].Reason.Category);
+        if (!Rows[I].Reason.Detail.empty()) {
+            OS << ",\n      \"detail\": ";
+            writeJsonString(OS, Rows[I].Reason.Detail);
+        }
+        OS << "\n    }";
+    }
+    OS << "\n  ]\n}\n";
+    OS.flush();
+    outs() << "classifier-report-json: " << Path << "\n";
     return 0;
 }
 
@@ -864,14 +994,17 @@ int main(int argc, char **argv) {
     collectReachable(EvalFn, Reach);
 
     DenseSet<Function *> RuntimeFuncs;
+    DenseMap<Function *, ClassificationReason> RuntimeReasons;
     for (auto *F : Reach) {
         std::string Body;
         functionToString(*F, Body);
-        if (isRuntimeFunction(*F, Body))
+        if (auto Reason = classifyRuntimeReason(*F, Body)) {
             RuntimeFuncs.insert(F);
+            RuntimeReasons[F] = std::move(*Reason);
+        }
     }
     if (!NoDeclRuntimeMerge)
-        mergeRuntimeViaDeclCalls(Reach, RuntimeFuncs);
+        mergeRuntimeViaDeclCalls(Reach, RuntimeFuncs, RuntimeReasons);
 
     if (AnalyzePhases) {
         reportAnalyzePhases(*M, Reach);
@@ -879,7 +1012,6 @@ int main(int argc, char **argv) {
             if (writeAnalyzePhasesJson(*M, Reach, EvalFn, AnalyzePhasesJson))
                 return 1;
         }
-        return 0;
     }
 
     DenseSet<Function *> GPUFuncs;
@@ -896,6 +1028,15 @@ int main(int argc, char **argv) {
         if (VlOff) outs() << "vlSymsp offset:  " << *VlOff << " bytes\n";
         else       outs() << "vlSymsp offset:  (not detected)\n";
     }
+
+    if (!ClassifierReportOut.empty()) {
+        if (writeClassifierReportJson(Reach, RuntimeFuncs, RuntimeReasons, EvalFn, VlOff,
+                                      !NoDeclRuntimeMerge, ClassifierReportOut))
+            return 1;
+    }
+
+    if (AnalyzePhases)
+        return 0;
 
     if (OutFile.empty()) return 0;  // analysis-only mode
 
